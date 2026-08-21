@@ -1,0 +1,182 @@
+{
+  "model_version": "1.0.0",
+  "algorithm": "Hybrid (n-grams + lexical)",
+  "kind": "hybrid",
+  "trained_at": "2026-08-16T07:24:25.274208+00:00",
+  "random_seed": 20360306,
+  "training_rows": 151707,
+  "internal_test_rows": 37927,
+  "lexical_feature_count": 18,
+  "lexical_feature_names": [
+    "hostname_length",
+    "registrable_domain_length",
+    "num_dots",
+    "num_hyphens",
+    "num_digits",
+    "digit_ratio",
+    "has_ip_host",
+    "subdomain_count",
+    "tld_length",
+    "is_abused_tld",
+    "is_url_shortener",
+    "has_punycode",
+    "hostname_entropy",
+    "num_suspicious_keywords",
+    "brand_outside_domain",
+    "longest_token_length",
+    "num_tokens",
+    "max_consonant_run"
+  ],
+  "ngram_range": [
+    3,
+    5
+  ],
+  "ngram_vocabulary": 60000,
+  "model_comparison": {
+    "RandomForest": {
+      "model": "RandomForest (lexical)",
+      "accuracy": 0.808948770005537,
+      "precision": 0.8717639593908629,
+      "recall": 0.724477958236659,
+      "f1": 0.7913258841147334,
+      "roc_auc": 0.8832669577807594,
+      "confusion_matrix": {
+        "tn": 16942,
+        "fp": 2021,
+        "fn": 5225,
+        "tp": 13739
+      }
+    },
+    "XGBoost": {
+      "model": "XGBoost (lexical)",
+      "accuracy": 0.8099506947557149,
+      "precision": 0.8825328647663673,
+      "recall": 0.715091752794769,
+      "f1": 0.7900378677541509,
+      "roc_auc": 0.8853559415423966,
+      "confusion_matrix": {
+        "tn": 17158,
+        "fp": 1805,
+        "fn": 5403,
+        "tp": 13561
+      }
+    },
+    "Hybrid": {
+      "model": "Hybrid (n-grams + lexical)",
+      "accuracy": 0.8543781474938698,
+      "precision": 0.8824332783247026,
+      "recall": 0.817707234760599,
+      "f1": 0.8488381640528779,
+      "roc_auc": 0.9345909161373469,
+      "confusion_matrix": {
+        "tn": 16897,
+        "fp": 2066,
+        "fn": 3457,
+        "tp": 15507
+      }
+    }
+  },
+  "selected_metrics": {
+    "model": "Hybrid (n-grams + lexical)",
+    "accuracy": 0.8543781474938698,
+    "precision": 0.8824332783247026,
+    "recall": 0.817707234760599,
+    "f1": 0.8488381640528779,
+    "roc_auc": 0.9345909161373469,
+    "confusion_matrix": {
+      "tn": 16897,
+      "fp": 2066,
+      "fn": 3457,
+      "tp": 15507
+    }
+  },
+  "cross_validation": {
+    "folds": 5,
+    "scope": "hybrid features, training split only",
+    "fold_accuracies": [
+      0.856140003954914,
+      0.8516248104937051,
+      0.8538940707293761,
+      0.8524109291058304,
+      0.8573547345176494
+    ],
+    "mean_accuracy": 0.854284909760295,
+    "std_accuracy": 0.002172826972461666
+  },
+  "lexical_feature_weights": [
+    {
+      "feature": "hostname_length",
+      "weight": 9.67825472004644
+    },
+    {
+      "feature": "num_dots",
+      "weight": -7.052531389869831
+    },
+    {
+      "feature": "num_tokens",
+      "weight": -6.239599655369576
+    },
+    {
+      "feature": "max_consonant_run",
+      "weight": 5.974975532532268
+    },
+    {
+      "feature": "has_ip_host",
+      "weight": 4.2377045065554455
+    },
+    {
+      "feature": "is_abused_tld",
+      "weight": 3.655231495978335
+    },
+    {
+      "feature": "digit_ratio",
+      "weight": 3.4750666994706285
+    },
+    {
+      "feature": "subdomain_count",
+      "weight": -3.2847171004319713
+    },
+    {
+      "feature": "has_punycode",
+      "weight": 3.242646115155294
+    },
+    {
+      "feature": "hostname_entropy",
+      "weight": 2.731376435874789
+    },
+    {
+      "feature": "num_suspicious_keywords",
+      "weight": 2.2932985901513088
+    },
+    {
+      "feature": "num_hyphens",
+      "weight": -1.9966910714564
+    },
+    {
+      "feature": "longest_token_length",
+      "weight": -1.5322541811156063
+    },
+    {
+      "feature": "brand_outside_domain",
+      "weight": 1.5179497284675418
+    },
+    {
+      "feature": "is_url_shortener",
+      "weight": 0.3977428680570973
+    },
+    {
+      "feature": "tld_length",
+      "weight": 0.3063396443123797
+    },
+    {
+      "feature": "registrable_domain_length",
+      "weight": 0.1512776610954807
+    },
+    {
+      "feature": "num_digits",
+      "weight": -0.017788420315820463
+    }
+  ],
+  "design_note": "Hostname-only features. Path, query and scheme are deliberately excluded because in the PhiUSIIL corpus every legitimate URL is a bare HTTPS homepage, which lets a model reach 99.5 percent by learning the collection method rather than phishing. HTTPS and SSL validity are measured live by the backend rule engine instead.",
+  "note": "Metrics here are from the internal train/test split and are NOT the reported project result. The headline figure comes from evaluation/run_eval.py on the frozen 400-URL held-out set."
+}

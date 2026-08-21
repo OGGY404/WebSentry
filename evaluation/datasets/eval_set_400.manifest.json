@@ -1,0 +1,30 @@
+{
+  "frozen_at": "2026-08-16T07:23:15.459163+00:00",
+  "random_seed": 20360306,
+  "eval_rows": 400,
+  "eval_phishing": 200,
+  "eval_legitimate": 200,
+  "train_pool_rows": 329188,
+  "train_pool_phishing": 94817,
+  "train_pool_legitimate": 234371,
+  "cleaning": {
+    "phishing_rows_removed_on_topsite_hosts": 1664,
+    "topsite_exclude_n": 200000,
+    "legit_domains_added": 99771,
+    "ambiguous_hostnames_dropped": 50
+  },
+  "split_strategy": "hostname-level holdout (no host appears in both sets)",
+  "sources": [
+    {
+      "name": "PhiUSIIL Phishing URL Dataset",
+      "citation": "Prasad, A. and Chandra, S. (2024) 'PhiUSIIL: a diverse security profile empowered phishing URL detection framework based on similarity index and incremental learning', Computers and Security, 136, 103545.",
+      "sha256": "a236549cd369cd80bd478ff8e1779cbf44c58d5c3f79f7a51a1adbed7d06d1c6"
+    },
+    {
+      "name": "Cisco Umbrella Popularity List (top 1 million)",
+      "citation": "Cisco Umbrella (2026) Umbrella Popularity List. Available at: https://s3-us-west-1.amazonaws.com/umbrella-static/index.html",
+      "sha256": "9d19392d5014020beaae7e9b1993dd2c7a2f94d791db851b03e21404c0dd0a73"
+    }
+  ],
+  "eval_sha256": "7295204dc1ad7270b2851166b61faca51523a1a132f696e43b18220dd237adf3"
+}
