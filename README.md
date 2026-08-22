@@ -29,10 +29,23 @@ Run on the frozen 400-URL held-out set through the complete pipeline. All 400 sc
 | **HIGH band** (Leave Immediately) | **88.75%** | 98.74% | 78.50% | 87.47% | 2 of 200 (1.0%) |
 | HIGH or MEDIUM (any warning) | 90.25% | 87.79% | 93.50% | 90.56% | 26 of 200 (13.0%) |
 
-The 85% target is met under both readings. Mean scan time 12 ms, well inside the 1 second target.
+The 85% target is met under both readings.
 
 Reproduce with `python evaluation/run_eval.py`. The script refuses to run if the test set no longer
 matches the SHA-256 in its manifest, so a reported figure always refers to the same data.
+
+### Speed
+
+| What is being measured | Time |
+|---|---|
+| Score only (rules + model), no explanation | **13 ms** mean, 27 ms worst |
+| Full scan including a fresh Claude explanation | about **1 to 2.2 seconds** |
+| Repeat visit to the same site (explanation cached) | **under 20 ms** |
+
+The score itself is far inside the 1 second target. The Claude call is what costs the time, so the
+first visit to a new website takes a second or two and every visit after that is instant. The
+evaluation run uses the template rather than the API, because the wording cannot change the band
+being measured, and 400 API calls would add ten minutes and a bill for text nobody reads.
 
 ## Score convention
 

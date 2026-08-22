@@ -19,7 +19,13 @@ import joblib
 import numpy as np
 from scipy.sparse import csr_matrix, hstack
 
-from features.url_features import FEATURE_LABELS, FEATURE_NAMES, extract_vector, hostname_of
+from features.url_features import (
+    FEATURE_LABELS,
+    FEATURE_NAMES,
+    extract_vector,
+    hostname_of,
+    is_worth_naming,
+)
 
 MODEL_PATH = Path(__file__).resolve().parent / "models" / "risk_classifier.joblib"
 
@@ -124,16 +130,22 @@ class RiskModel:
             if importances is None:
                 return []
             contributions = importances * (np.asarray(raw) > 0)
+        # A feature is named only when it pushes towards phishing AND its value
+        # is actually big enough for its wording to be true. The scaler does not
+        # centre the data, so without the second test a tiny value still looks
+        # like it is pushing towards phishing and the user is told something
+        # false about their website.
+        raw_by_name = dict(zip(self.feature_names, raw))
         ranked = sorted(
             (
                 {
                     "feature": name,
                     "label": FEATURE_LABELS.get(name, name),
                     "contribution": round(float(value), 4),
+                    "value": round(float(raw_by_name[name]), 4),
                 }
                 for name, value in zip(self.feature_names, contributions)
-                # Only surface features actively pushing toward phishing.
-                if value > 0
+                if value > 0 and is_worth_naming(name, raw_by_name[name])
             ),
             key=lambda row: row["contribution"],
             reverse=True,

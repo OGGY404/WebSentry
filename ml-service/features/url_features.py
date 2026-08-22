@@ -74,6 +74,44 @@ FEATURE_LABELS = {
     "max_consonant_run": "unpronounceable run of letters, typical of generated domains",
 }
 
+# The smallest value a feature must reach before its label may be shown to a user.
+#
+# Why this is needed: the model is scaled with MaxAbsScaler, which divides by the
+# largest value but never subtracts the average. Every scaled value therefore
+# stays positive, so any feature with a positive weight looks like it is pushing
+# the URL towards phishing even when its value is tiny. Without these limits
+# lnkd.in, a hostname of seven characters, was described to the user as having
+# an "unusually long web address".
+#
+# Every label above is a claim about the address in plain English. These numbers
+# are the point at which that claim is actually true. They only decide which
+# reasons are NAMED. The risk score itself is not affected.
+NAMING_THRESHOLDS = {
+    "hostname_length": 25,
+    "registrable_domain_length": 20,
+    "num_dots": 4,
+    "num_hyphens": 3,
+    "num_digits": 4,
+    "digit_ratio": 0.2,
+    "has_ip_host": 1,
+    "subdomain_count": 3,
+    "tld_length": 5,
+    "is_abused_tld": 1,
+    "is_url_shortener": 1,
+    "has_punycode": 1,
+    "hostname_entropy": 3.5,
+    "num_suspicious_keywords": 1,
+    "brand_outside_domain": 1,
+    "longest_token_length": 12,
+    "num_tokens": 5,
+    "max_consonant_run": 5,
+}
+
+
+def is_worth_naming(feature: str, value: float) -> bool:
+    """True if the feature is large enough for its label to be honest."""
+    return value >= NAMING_THRESHOLDS.get(feature, 1)
+
 # Cheap or frequently abused top level domains.
 ABUSED_TLDS = {
     "tk", "ml", "ga", "cf", "gq", "xyz", "top", "work", "click", "link",

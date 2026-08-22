@@ -79,7 +79,11 @@ public class ClaudeExplainer implements Explainer {
     }
 
     @Override
-    public Explanation explain(String url, RuleChecks checks, RiskAssessment risk) {
+    public Explanation explain(String url, RuleChecks checks, RiskAssessment risk, boolean allowAi) {
+        if (!allowAi) {
+            return new Explanation(template(checks, risk), false);
+        }
+
         String cacheKey = cacheKey(url, checks, risk);
         String cached = cache.get(cacheKey);
         if (cached != null) {

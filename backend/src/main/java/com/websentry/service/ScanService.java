@@ -105,7 +105,10 @@ public class ScanService {
         RuleChecks checks = ruleEngine.check(url, safeBrowsingHit, performLiveChecks);
         RiskAssessment base = scorer.score(url);
         RiskAssessment finalRisk = combiner.combine(base, checks);
-        Explanation explanation = explainer.explain(url, checks, finalRisk);
+        // Evaluation runs use the template. The wording cannot change the band
+        // being measured, so calling the API 400 times would cost money and add
+        // ten minutes for text that is never read.
+        Explanation explanation = explainer.explain(url, checks, finalRisk, performLiveChecks);
 
         long durationMs = (System.nanoTime() - started) / 1_000_000;
 

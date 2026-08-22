@@ -97,6 +97,16 @@ class ClaudeExplainerTest {
     }
 
     @Test
+    @DisplayName("Turning the AI off returns the template without calling the API")
+    void aiCanBeSkipped() {
+        Explanation result = explainer.explain(
+                "http://paypal-verify.tk", dangerous(), risk(100), false);
+
+        assertFalse(result.fromAi());
+        assertTrue(result.text().contains("leave this website"));
+    }
+
+    @Test
     @DisplayName("The explanation stays short enough to read in a popup")
     void explanationStaysShort() {
         String text = explainer.template(dangerous(), risk(100));
