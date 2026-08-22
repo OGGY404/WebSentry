@@ -189,10 +189,23 @@ public class ClaudeExplainer implements Explainer {
             problems.add("its web address follows a pattern often used by fake websites");
         }
 
+        boolean lowRisk = "LOW".equals(risk.riskBand());
         StringBuilder text = new StringBuilder();
-        if (problems.isEmpty()) {
-            text.append("We did not find any clear security problems with this website. ");
-            text.append("The connection is encrypted and the address looks normal. ");
+
+        // The wording must always agree with the score. Saying "no problems
+        // found" next to a warning, or listing problems next to a safe verdict,
+        // makes the report confusing and untrustworthy.
+        if (lowRisk && problems.isEmpty()) {
+            text.append("We did not find any security problems with this website. ")
+                    .append("The connection is encrypted and the address looks normal. ");
+        } else if (lowRisk) {
+            text.append("This website passed the main safety checks, with one small note: ")
+                    .append(joinWithAnd(problems)).append(". ");
+        } else if (problems.isEmpty()) {
+            // The rule checks passed, so the score came from the model alone.
+            text.append("This website was given a risk score of ").append(risk.riskScore())
+                    .append(" out of 100. The basic safety checks passed, but its web address ")
+                    .append("is unusual compared with normal websites. ");
         } else {
             text.append("This website was given a risk score of ").append(risk.riskScore())
                     .append(" out of 100 because ").append(joinWithAnd(problems)).append(". ");

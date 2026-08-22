@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-08-22T19:07:29.901597+00:00",
+  "run_at": "2026-08-22T19:33:00.235950+00:00",
   "backend": "http://127.0.0.1:8080",
   "live_checks": false,
   "scorer": "ml",
@@ -41,9 +41,9 @@
     "false_positive_rate": 0.13
   },
   "timing": {
-    "mean_scan_ms": 12.01,
+    "mean_scan_ms": 12.11,
     "median_scan_ms": 12,
-    "max_scan_ms": 38
+    "max_scan_ms": 24
   },
   "band_definition": {
     "primary": "HIGH counted as a phishing verdict",
