@@ -13,9 +13,26 @@ sits behind a `RiskScorer` interface so Version A remains a config change.
 |---|---|
 | ML service (Python, FastAPI) | Working. Model trained, `/predict` live. |
 | Evaluation set | Frozen, 200 phishing / 200 legitimate, SHA-256 in manifest. |
-| Backend (Java, Spring Boot) | Not started. Requires JDK 17 and Maven. |
-| Extension (Manifest V3) | Not started. |
-| Dashboard (React, Vite) | Not started. |
+| Evaluation script | Working. `run_eval.py` reproduces the full metrics table. |
+| Backend (Java, Spring Boot 3.5) | Working. Rule engine, scoring, explanations, storage, admin API. |
+| Extension (Manifest V3) | Working. Popup, badge, history, page checks. |
+| Dashboard (React, Vite) | Working. Statistics, scans, flagged sites, model metrics. |
+
+See `docs/RUNNING.md` for how to start everything, including how to load the extension in Chrome.
+
+## Headline result
+
+Run on the frozen 400-URL held-out set through the complete pipeline. All 400 scanned, none failed.
+
+| Definition of a phishing verdict | Accuracy | Precision | Recall | F1 | False positives |
+|---|---|---|---|---|---|
+| **HIGH band** (Leave Immediately) | **88.75%** | 98.74% | 78.50% | 87.47% | 2 of 200 (1.0%) |
+| HIGH or MEDIUM (any warning) | 90.25% | 87.79% | 93.50% | 90.56% | 26 of 200 (13.0%) |
+
+The 85% target is met under both readings. Mean scan time 12 ms, well inside the 1 second target.
+
+Reproduce with `python evaluation/run_eval.py`. The script refuses to run if the test set no longer
+matches the SHA-256 in its manifest, so a reported figure always refers to the same data.
 
 ## Score convention
 
@@ -27,34 +44,77 @@ sits behind a `RiskScorer` interface so Version A remains a config change.
 | MEDIUM | 40-69 | Proceed with Caution |
 | HIGH | 70-100 | Leave Immediately |
 
-Note the two Figma prototypes in the parent folder use the opposite direction (87 = safe). They
-are visual reference only and need updating to match this convention before the demo.
+The Figma prototype in `docs/prototype/` used the opposite direction (87 = safe). The built
+extension uses the convention above throughout.
 
-## Running the ML service
-
-```
-cd ml-service
-pip install -r requirements.txt
-uvicorn app:app --host 127.0.0.1 --port 8000
-```
-
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/predict` | Score one URL. Returns riskScore, band, recommendation, confidence, topFeatures. |
-| POST | `/predict/batch` | Score up to 500 URLs, used by the evaluation run. |
-| POST | `/features` | Raw feature dictionary, for the report and for debugging. |
-| GET | `/model/info` | Version, training date, metrics, model comparison. |
-| GET | `/health` | Liveness. |
-
-## Reproducing the model
+## How a scan works
 
 ```
-python ml-service/training/prepare_data.py     # build corpus, freeze eval set
-python ml-service/training/train.py            # train, compare, persist
+extension  ──POST /api/v1/scan──>  backend
+                                     1. Google Safe Browsing lookup (optional)
+                                     2. rule engine: HTTPS, certificate, mixed content, address
+                                     3. RiskScorer -> ML service (hostname model), 0-100
+                                     4. RiskCombiner: rules can only raise the score
+                                     5. Explainer -> Claude, or template if it fails
+                                     6. save the record, update the flagged summary
 ```
 
-`prepare_data.py` refuses to overwrite a frozen evaluation set without `--force`. Do not pass
-`--force` after results have been reported: it invalidates every accuracy figure.
+`RiskCombiner` is where the model score and the live rule findings are joined. The weights are
+written in one place and documented there, because they affect the reported accuracy.
+
+## Failure behaviour
+
+Every external dependency is optional at runtime. This is deliberate: a demo must not fail because
+a key was not approved or the internet dropped.
+
+| If this is missing | What happens |
+|---|---|
+| `ANTHROPIC_API_KEY` | A built-in template writes the explanation. The scan still works. |
+| `SAFE_BROWSING_API_KEY` | The threat lookup is skipped. Rules and the model still decide. |
+| `MONGODB_URI` | Scans are kept in memory. The extension and dashboard still work. |
+| ML service not running | The model contributes 0 and the rule checks decide alone. |
+
+## Repository layout
+
+```
+websentry/
+├── ml-service/          Python FastAPI + scikit-learn
+│   ├── app.py           service endpoints
+│   ├── scoring.py       model loading and inference, shared by training and serving
+│   ├── features/        hostname feature extraction
+│   ├── training/        prepare_data.py, train.py
+│   └── models/          serialised .joblib artefacts
+├── backend/             Spring Boot 3.5, Java 17
+│   └── src/main/java/com/websentry/
+│       ├── controller/  ScanController, AdminController, HealthController
+│       ├── service/     RuleEngine, RiskScorer, RiskCombiner, Explainer, ScanService
+│       ├── model/       ScanRecord, RuleChecks, RiskAssessment
+│       ├── repository/  ScanStore with MongoDB and in-memory versions
+│       └── config/      settings, CORS, storage selection
+├── extension/           Manifest V3 browser extension
+│   ├── background/      service worker: scans on navigation, badge, warnings
+│   ├── content/         reads the live page for mixed content and login forms
+│   ├── popup/           the security report the user sees
+│   └── dev/             preview.html, a development page only
+├── dashboard/           React + Vite admin UI
+├── evaluation/
+│   ├── datasets/        frozen eval set + manifest (raw/ is gitignored)
+│   ├── run_eval.py      reproduces the metrics table
+│   └── results/         evaluation report, predictions, training report
+└── docs/
+    ├── RUNNING.md       how to start everything
+    ├── screenshots/     images for the implementation chapter
+    └── prototype/       the original Figma Make export, kept as design reference
+```
+
+## Testing
+
+19 backend tests, all passing (`cd backend && mvnw test`):
+
+- `RuleEngineTest` — 12 tests covering HTTPS, IP hosts, brand impersonation, abused endings,
+  punycode, the `@` trick, and that skipping live checks never falsely fails a certificate.
+- `ClaudeExplainerTest` — 6 tests that the explanation never contradicts its own score.
+- `BackendApplicationTests` — the application context starts.
 
 ## Data sources
 
@@ -101,24 +161,15 @@ time and is a documented limitation of the model.
 5-fold stratified cross-validation on the hybrid: mean accuracy 0.8543, standard deviation 0.0022.
 Mean scoring latency 7.2 ms per URL.
 
-The headline project figure comes from `evaluation/run_eval.py` on the frozen 400-URL held-out set,
-which has not been run yet. These numbers are from the internal split and must not be quoted as the
-evaluation result.
+These are the model on its own. The headline project figure at the top of this file comes from the
+complete pipeline on the held-out 400-URL set.
 
-## Repository layout
+## Reproducing the model
 
 ```
-websentry/
-├── ml-service/          Python FastAPI + scikit-learn
-│   ├── app.py           service endpoints
-│   ├── scoring.py       model loading and inference, shared by training and serving
-│   ├── features/        hostname feature extraction
-│   ├── training/        prepare_data.py, train.py
-│   └── models/          serialised .joblib artefacts
-├── evaluation/
-│   ├── datasets/        frozen eval set + manifest (raw/ is gitignored)
-│   └── results/         training report
-├── backend/             Spring Boot (not started)
-├── extension/           Manifest V3 (not started)
-└── dashboard/           React + Vite (not started)
+python ml-service/training/prepare_data.py     # build corpus, freeze eval set
+python ml-service/training/train.py            # train, compare, persist
 ```
+
+`prepare_data.py` refuses to overwrite a frozen evaluation set without `--force`. Do not pass
+`--force` after results have been reported: it invalidates every accuracy figure.

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebSentry popup preview</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0d1117;
+        color: #e8ecf0;
+        font-family: Inter, "Segoe UI", system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        padding: 26px 16px 40px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .note {
+        margin: 0;
+        max-width: 520px;
+        text-align: center;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #8b95a1;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .controls button {
+        background: #1c2333;
+        color: #e8ecf0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 7px 12px;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .controls button:hover {
+        border-color: #4c6ef5;
+      }
+      #stage {
+        width: 360px;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        background: #161b27;
+      }
+      #status {
+        font-size: 12px;
+        color: #8b95a1;
+        min-height: 16px;
+      }
+    </style>
+    <link rel="stylesheet" href="../popup/popup.css" />
+  </head>
+  <body>
+    <h1>WebSentry popup preview</h1>
+    <p class="note">
+      A development page only. It runs the real popup code against the real backend,
+      with a small stand in for the Chrome extension APIs, so the popup can be
+      checked and photographed without installing the extension.
+      It is not part of the extension that ships.
+    </p>
+
+    <div class="controls">
+      <button data-url="https://www.bbc.co.uk">Safe site (bbc.co.uk)</button>
+      <button data-url="http://www.dubbeldwars.com">Caution (no HTTPS)</button>
+      <button data-url="http://paypal-secure-verify-account.tk/login.php">Dangerous (fake PayPal)</button>
+      <button data-view="history">History view</button>
+    </div>
+
+    <div id="status">Loading...</div>
+    <div id="stage"></div>
+
+    <script>
+      // ---------------------------------------------------------------------
+      // A small stand in for the Chrome extension APIs, so the popup code can
+      // run on a normal web page. Only the calls the popup actually makes are
+      // provided here.
+      // ---------------------------------------------------------------------
+      const BACKEND = "http://127.0.0.1:8080";
+
+      const fakeStorage = {
+        history: [
+          {
+            domain: "paypal-secure-verify-account.tk",
+            url: "http://paypal-secure-verify-account.tk/login.php",
+            riskScore: 100,
+            riskBand: "HIGH",
+            recommendation: "Leave Immediately",
+            timestamp: new Date(Date.now() - 2 * 60000).toISOString()
+          },
+          {
+            domain: "dubbeldwars.com",
+            url: "http://www.dubbeldwars.com",
+            riskScore: 52,
+            riskBand: "MEDIUM",
+            recommendation: "Proceed with Caution",
+            timestamp: new Date(Date.now() - 26 * 60000).toISOString()
+          },
+          {
+            domain: "bbc.co.uk",
+            url: "https://www.bbc.co.uk",
+            riskScore: 7,
+            riskBand: "LOW",
+            recommendation: "Stay Safe",
+            timestamp: new Date(Date.now() - 3 * 3600000).toISOString()
+          }
+        ]
+      };
+
+      let currentUrl = "https://www.bbc.co.uk";
+      let cachedRecord = null;
+
+      window.chrome = {
+        tabs: {
+          query: async () => [{ id: 1, url: currentUrl }]
+        },
+        storage: {
+          local: {
+            get: async (key) => (key === "history" ? { history: fakeStorage.history } : {}),
+            set: async (value) => Object.assign(fakeStorage, value)
+          }
+        },
+        runtime: {
+          sendMessage: async (message) => {
+            if (message.type === "GET_RESULT" || message.type === "RESCAN") {
+              if (message.type === "GET_RESULT" && cachedRecord) {
+                return { status: "ok", record: cachedRecord, scannedAt: Date.now() };
+              }
+              try {
+                const response = await fetch(`${BACKEND}/api/v1/scan`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ url: currentUrl, clientId: "popup-preview" })
+                });
+                if (!response.ok) {
+                  throw new Error(`status ${response.status}`);
+                }
+                cachedRecord = await response.json();
+                return { status: "ok", record: cachedRecord, scannedAt: Date.now() };
+              } catch (error) {
+                return {
+                  status: "error",
+                  message: "WebSentry could not reach its backend. Please check that it is running."
+                };
+              }
+            }
+            return { ok: true };
+          }
+        }
+      };
+
+      // ---------------------------------------------------------------------
+      // Load the real popup markup and the real popup script into the stage.
+      // ---------------------------------------------------------------------
+      async function mountPopup() {
+        const status = document.getElementById("status");
+        const stage = document.getElementById("stage");
+
+        status.textContent = `Scanning ${currentUrl} ...`;
+        cachedRecord = null;
+
+        const html = await fetch("../popup/popup.html").then((r) => r.text());
+        const parsed = new DOMParser().parseFromString(html, "text/html");
+        stage.innerHTML = parsed.querySelector(".frame").outerHTML;
+
+        // Re-run the popup script against the freshly inserted markup.
+        const previous = document.getElementById("popup-script");
+        if (previous) {
+          previous.remove();
+        }
+        const script = document.createElement("script");
+        script.id = "popup-script";
+        script.src = `../popup/popup.js?cacheBust=${Date.now()}`;
+        script.onload = () => {
+          document.dispatchEvent(new Event("DOMContentLoaded"));
+          status.textContent = `Showing ${currentUrl}`;
+        };
+        document.body.append(script);
+      }
+
+      document.querySelectorAll(".controls button").forEach((button) => {
+        button.addEventListener("click", async () => {
+          if (button.dataset.url) {
+            currentUrl = button.dataset.url;
+            await mountPopup();
+          } else {
+            // Switch the mounted popup to its history tab.
+            const tab = document.querySelector('.tab[data-view="history"]');
+            if (tab) {
+              tab.click();
+            }
+          }
+        });
+      });
+
+      mountPopup();
+    </script>
+  </body>
+</html>
