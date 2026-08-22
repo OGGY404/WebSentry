@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebSentry</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="frame">
+      <!-- Title bar -->
+      <header class="header">
+        <div class="brand">
+          <img src="../assets/icon32.png" alt="" class="brand-icon" />
+          <span class="brand-name">WebSentry</span>
+        </div>
+        <nav class="tabs">
+          <button class="tab is-active" data-view="report" type="button">Report</button>
+          <button class="tab" data-view="history" type="button">History</button>
+        </nav>
+      </header>
+
+      <!-- While the scan is running -->
+      <section id="view-loading" class="view">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="muted center">Checking this website...</p>
+      </section>
+
+      <!-- If the backend cannot be reached -->
+      <section id="view-error" class="view hidden">
+        <div class="state-icon error" aria-hidden="true">!</div>
+        <p class="center" id="error-message">WebSentry could not reach its backend.</p>
+        <p class="muted center small">
+          Start the backend, then press Try again.
+        </p>
+        <button class="button" id="retry-button" type="button">Try again</button>
+      </section>
+
+      <!-- For pages that cannot be checked, such as the new tab page -->
+      <section id="view-unsupported" class="view hidden">
+        <div class="state-icon" aria-hidden="true">i</div>
+        <p class="center">This page cannot be checked.</p>
+        <p class="muted center small">
+          WebSentry checks normal websites that start with http or https.
+        </p>
+      </section>
+
+      <!-- The security report -->
+      <section id="view-report" class="view hidden">
+        <div class="score-area">
+          <div class="dial">
+            <svg width="128" height="128" viewBox="0 0 128 128" aria-hidden="true">
+              <circle class="dial-track" cx="64" cy="64" r="52" />
+              <circle class="dial-value" id="dial-value" cx="64" cy="64" r="52" />
+            </svg>
+            <div class="dial-centre">
+              <span class="dial-score" id="score-number">0</span>
+              <span class="dial-unit">RISK / 100</span>
+            </div>
+          </div>
+
+          <div class="badge" id="recommendation-badge">
+            <span class="badge-dot" aria-hidden="true"></span>
+            <span id="recommendation-text">Stay Safe</span>
+          </div>
+
+          <div class="domain" id="domain-text">example.com</div>
+
+          <p class="explanation" id="explanation-text"></p>
+          <p class="source-note muted small" id="source-note"></p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="checks">
+          <h2 class="section-title">Security checks</h2>
+          <ul class="check-list" id="check-list"></ul>
+        </div>
+
+        <div class="reasons hidden" id="reasons-block">
+          <h2 class="section-title">What we found</h2>
+          <ul class="reason-list" id="reason-list"></ul>
+        </div>
+
+        <footer class="footer">
+          <button class="button" id="rescan-button" type="button">Check again</button>
+          <p class="timing muted small" id="timing-text"></p>
+        </footer>
+      </section>
+
+      <!-- Past scans -->
+      <section id="view-history" class="view hidden">
+        <h2 class="section-title">Recent websites</h2>
+        <ul class="history-list" id="history-list"></ul>
+        <p class="muted center small hidden" id="history-empty">
+          No websites have been checked yet.
+        </p>
+        <footer class="footer">
+          <button class="button ghost" id="clear-history-button" type="button">
+            Clear history
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

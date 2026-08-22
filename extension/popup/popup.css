@@ -1,0 +1,424 @@
+/*
+ * WebSentry popup styles.
+ *
+ * Colours follow the design prototype: a dark card, one accent blue, and
+ * green, amber or red depending on how risky the website is.
+ */
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b27;
+  --border: rgba(255, 255, 255, 0.07);
+  --text: #e8ecf0;
+  --muted: #8b95a1;
+  --accent: #4c6ef5;
+
+  --safe: #22c55e;
+  --caution: #f59e0b;
+  --danger: #ef4444;
+
+  /* Set from JavaScript to match the risk band. */
+  --band: var(--safe);
+  --band-soft: rgba(34, 197, 94, 0.12);
+  --band-border: rgba(34, 197, 94, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 360px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+}
+
+.frame {
+  background: var(--surface);
+  min-height: 200px;
+}
+
+/* --- Header ------------------------------------------------------------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.brand-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.brand-name {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.is-active {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+/* --- Views -------------------------------------------------------------- */
+
+.view {
+  padding: 16px 14px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.center {
+  text-align: center;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 11px;
+}
+
+/* --- Loading and error states ------------------------------------------- */
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  margin: 18px auto 10px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.state-icon {
+  width: 34px;
+  height: 34px;
+  margin: 10px auto 12px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
+.state-icon.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+/* --- Score dial --------------------------------------------------------- */
+
+.score-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+}
+
+.dial {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+
+.dial svg {
+  transform: rotate(-90deg);
+}
+
+.dial-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 8;
+}
+
+.dial-value {
+  fill: none;
+  stroke: var(--band);
+  stroke-width: 8;
+  stroke-linecap: round;
+  /* 2 * pi * 52, the full length of the ring */
+  stroke-dasharray: 326.7;
+  stroke-dashoffset: 326.7;
+  transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
+}
+
+.dial-centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.dial-score {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--band);
+  font-variant-numeric: tabular-nums;
+}
+
+.dial-unit {
+  margin-top: 3px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+/* --- Recommendation badge ----------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 20px;
+  background: var(--band-soft);
+  border: 1px solid var(--band-border);
+  color: var(--band);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--band);
+}
+
+.domain {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  word-break: break-all;
+  text-align: center;
+}
+
+.explanation {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b0b9c5;
+  text-align: center;
+}
+
+.source-note {
+  margin: 0;
+}
+
+/* --- Dividers and sections ---------------------------------------------- */
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0 0;
+}
+
+.section-title {
+  margin: 14px 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* --- Check list --------------------------------------------------------- */
+
+.check-list,
+.reason-list,
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.check-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.check-mark {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0d1117;
+}
+
+.check-mark.pass {
+  background: var(--safe);
+}
+
+.check-mark.fail {
+  background: var(--caution);
+}
+
+.check-mark.unknown {
+  background: #6b7280;
+}
+
+.check-detail {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  max-width: 150px;
+}
+
+/* --- Reasons ------------------------------------------------------------ */
+
+.reason-list li {
+  position: relative;
+  padding: 5px 0 5px 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b0b9c5;
+}
+
+.reason-list li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 11px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--band);
+}
+
+/* --- History ------------------------------------------------------------ */
+
+.history-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-domain {
+  font-size: 12px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.history-time {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.history-score {
+  flex-shrink: 0;
+  min-width: 34px;
+  text-align: center;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Buttons and footer -------------------------------------------------- */
+
+.footer {
+  padding: 14px 0 2px;
+}
+
+.button {
+  width: 100%;
+  padding: 10px 0;
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button:hover {
+  opacity: 0.88;
+}
+
+.button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.button.ghost:hover {
+  color: var(--text);
+}
+
+.timing {
+  margin: 8px 0 0;
+  text-align: center;
+}
