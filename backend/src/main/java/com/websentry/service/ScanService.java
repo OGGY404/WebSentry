@@ -86,11 +86,19 @@ public class ScanService {
         String url = UrlUtils.normalise(rawUrl);
         String domain = UrlUtils.domainOf(url);
 
-        // A cached result for the same domain is reused for a short time.
-        CachedScan cached = cache.get(cacheKey(domain, performLiveChecks));
-        if (cached != null && !cached.isOlderThan(properties.getCacheTtlSeconds())) {
-            log.debug("cache hit for {}", domain);
-            return cached.record();
+        // A cached result for the same domain is reused for a short time, so
+        // moving between pages of one website does not scan it again.
+        //
+        // The cache is skipped in evaluation mode. Two different addresses on
+        // the same website must each be scored on their own, otherwise a few
+        // test URLs would silently receive another URL's result and the
+        // measured accuracy would not be exactly reproducible.
+        if (performLiveChecks) {
+            CachedScan cached = cache.get(domain);
+            if (cached != null && !cached.isOlderThan(properties.getCacheTtlSeconds())) {
+                log.debug("cache hit for {}", domain);
+                return cached.record();
+            }
         }
 
         boolean safeBrowsingHit = performLiveChecks && safeBrowsing.isKnownThreat(url);
@@ -131,7 +139,9 @@ public class ScanService {
             log.error("Could not save the scan for {}: {}", domain, e.toString());
         }
 
-        cache.put(cacheKey(domain, performLiveChecks), new CachedScan(record, Instant.now()));
+        if (performLiveChecks) {
+            cache.put(domain, new CachedScan(record, Instant.now()));
+        }
         log.info("scanned {} -> {} ({}) in {} ms", domain, record.getRiskScore(),
                 record.getRiskBand(), durationMs);
         return record;
@@ -148,10 +158,6 @@ public class ScanService {
     /** Which engine is running, shown on the health endpoint. */
     public String activeScorer() {
         return scorer.name();
-    }
-
-    private String cacheKey(String domain, boolean live) {
-        return domain + "|" + live;
     }
 
     /** One saved result plus the time it was made. */

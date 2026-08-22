@@ -34,3 +34,6 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 target/
+
+# Dashboard build output
+dashboard/dist/
