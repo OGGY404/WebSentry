@@ -1,0 +1,4 @@
+# Runs before the application starts, so the .env file is read in time for the
+# settings in application.properties to use it.
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.websentry.config.DotenvEnvironmentPostProcessor
