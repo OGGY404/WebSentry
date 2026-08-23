@@ -29,6 +29,32 @@
         line-height: 1.6;
         color: #8b95a1;
       }
+      #address-form {
+        width: 100%;
+        max-width: 520px;
+      }
+      #address {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: #161b27;
+        color: #e8ecf0;
+        font: inherit;
+        font-size: 14px;
+      }
+      #address::placeholder {
+        color: #6b7488;
+      }
+      #address:focus {
+        outline: none;
+        border-color: #4c6ef5;
+      }
+      .hint {
+        margin: 0;
+        font-size: 12px;
+        color: #8b95a1;
+      }
       .controls {
         display: flex;
         gap: 8px;
@@ -73,12 +99,23 @@
       It is not part of the extension that ships.
     </p>
 
+    <form id="address-form" autocomplete="off">
+      <input
+        id="address"
+        type="text"
+        placeholder="Type any website address, then press Enter"
+        aria-label="Website address to check"
+        spellcheck="false" />
+    </form>
+
+    <p class="hint">Or try one of these:</p>
+
     <div class="controls">
-      <button data-url="https://www.bbc.co.uk">Safe site (bbc.co.uk)</button>
-      <button data-url="https://www.thevelis.com">Real site (thevelis.com)</button>
-      <button data-url="http://www.dubbeldwars.com">Caution (no HTTPS)</button>
-      <button data-url="http://paypal-secure-verify-account.tk/login.php">Dangerous (fake PayPal)</button>
-      <button data-view="history">History view</button>
+      <button data-url="https://www.bbc.co.uk">bbc.co.uk</button>
+      <button data-url="https://www.thevelis.com">thevelis.com</button>
+      <button data-url="http://www.dubbeldwars.com">no HTTPS</button>
+      <button data-url="http://paypal-secure-verify-account.tk/login.php">fake PayPal</button>
+      <button data-view="history">History</button>
     </div>
 
     <div id="status">Loading...</div>
@@ -191,6 +228,19 @@
         };
         document.body.append(script);
       }
+
+      // Type any address and press Enter. This is the main way to use the page.
+      document.getElementById("address-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const typed = document.getElementById("address").value.trim();
+        if (!typed) {
+          return;
+        }
+        // The popup only accepts an address starting with http or https, so a
+        // bare name such as example.com gets https:// added here first.
+        currentUrl = typed.includes("://") ? typed : `https://${typed}`;
+        await mountPopup();
+      });
 
       document.querySelectorAll(".controls button").forEach((button) => {
         button.addEventListener("click", async () => {
