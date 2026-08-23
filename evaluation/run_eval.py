@@ -1,25 +1,4 @@
-"""
-WebSentry evaluation.
-
-Runs the frozen 400-URL test set through the complete WebSentry pipeline and
-reports the confusion matrix, accuracy, precision, recall and F1.
-
-This produces the headline figure for the project, so two rules matter:
-
-1. The test set is checked against the SHA-256 in its manifest before anything
-   runs. If the file has changed, the script stops. A quietly edited test set
-   would make every number meaningless and nobody would notice.
-
-2. Live website checks are turned off (live=false). Most phishing URLs in a
-   published dataset are already taken down, so opening them would measure
-   which servers are still online today rather than how well WebSentry detects
-   phishing, and the run could never be repeated with the same result.
-
-Usage:
-    # start the ML service and the backend first, then:
-    python evaluation/run_eval.py
-    python evaluation/run_eval.py --backend http://127.0.0.1:8080
-"""
+"""WebSentry evaluation."""
 
 from __future__ import annotations
 
@@ -41,9 +20,7 @@ RESULTS_DIR = BASE_DIR / "results"
 
 DEFAULT_BACKEND = "http://127.0.0.1:8080"
 
-# A website is counted as "detected as phishing" when WebSentry puts it in the
-# HIGH band, because that is when the user is told to leave immediately.
-# The MEDIUM band is a caution, not an accusation, so it is reported separately.
+# A site counts as detected when it lands in the HIGH band.
 PRIMARY_POSITIVE_BANDS = {"HIGH"}
 SECONDARY_POSITIVE_BANDS = {"HIGH", "MEDIUM"}
 
@@ -89,7 +66,7 @@ def load_rows() -> list[dict]:
 
 
 def scan(session: requests.Session, backend: str, url: str, timeout: float) -> dict | None:
-    """Sends one URL through the backend. Returns None if the call failed."""
+    """Sends one URL through the backend."""
     try:
         response = session.post(
             f"{backend}/api/v1/scan",
@@ -138,8 +115,7 @@ def metrics_from(matrix: dict) -> dict:
         "precision": round(precision, 4),
         "recall": round(recall, 4),
         "f1": round(f1, 4),
-        # False positive rate matters here: warning people about safe websites
-        # is what makes users switch a security tool off.
+        # False alarms matter: too many warnings and people switch the tool off.
         "false_positive_rate": round(fp / (fp + tn), 4) if (fp + tn) else 0.0,
     }
 

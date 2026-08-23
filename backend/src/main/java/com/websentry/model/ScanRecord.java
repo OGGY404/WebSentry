@@ -7,13 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-/**
- * One saved scan. This is what goes in the "scans" collection and what the
- * extension and the dashboard read back.
- *
- * We store the scan RESULT, not the phishing site itself. The threat data
- * comes from Google Safe Browsing at scan time.
- */
+/** One saved scan. */
 @Document(collection = "scans")
 public class ScanRecord {
 

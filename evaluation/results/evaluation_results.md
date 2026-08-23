@@ -1,6 +1,6 @@
 # WebSentry Evaluation Results
 
-Run at 2026-08-22T21:26:42.809251+00:00.
+Run at 2026-08-23T05:22:07.871216+00:00.
 Test set: 400 URLs (200 phishing, 200 legitimate).
 Model version 1.0.0, scoring engine `ml`.
 
@@ -39,4 +39,4 @@ Here both HIGH (Leave Immediately) and MEDIUM (Proceed with Caution) are treated
 
 ## Speed
 
-Mean scan time 13.31 ms, median 13 ms, slowest 27 ms.
+Mean scan time 20.75 ms, median 22 ms, slowest 96 ms.

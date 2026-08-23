@@ -1,9 +1,4 @@
-/*
- * WebSentry popup styles.
- *
- * Colours follow the design prototype: a dark card, one accent blue, and
- * green, amber or red depending on how risky the website is.
- */
+/* WebSentry popup styles. */
 
 :root {
   --bg: #0d1117;

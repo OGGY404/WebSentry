@@ -1,10 +1,4 @@
-/**
- * WebSentry popup.
- *
- * The popup does not scan anything itself. The background worker has already
- * done the work and saved the answer, so this file only reads that answer and
- * puts it on the screen.
- */
+/** WebSentry popup. */
 
 const BAND_STYLE = {
   LOW: { colour: "#22c55e", soft: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.3)" },
@@ -17,9 +11,7 @@ const RING_LENGTH = 326.7;
 
 let currentTab = null;
 
-// ---------------------------------------------------------------------------
 // View switching
-// ---------------------------------------------------------------------------
 
 function showView(name) {
   for (const view of document.querySelectorAll(".view")) {
@@ -34,9 +26,7 @@ function setActiveTab(name) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Drawing the report
-// ---------------------------------------------------------------------------
 
 function applyBandColours(band) {
   const style = BAND_STYLE[band] || BAND_STYLE.LOW;
@@ -168,9 +158,7 @@ function renderReport(record) {
   showView("report");
 }
 
-// ---------------------------------------------------------------------------
-// History
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- History.
 
 function formatWhen(isoString) {
   const when = new Date(isoString);
@@ -232,9 +220,7 @@ async function renderHistory() {
   showView("history");
 }
 
-// ---------------------------------------------------------------------------
 // Loading the result for the tab that is open
-// ---------------------------------------------------------------------------
 
 function isScannable(url) {
   return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"));
@@ -253,7 +239,7 @@ async function loadCurrentTab() {
   const result = await chrome.runtime.sendMessage({ type: "GET_RESULT", tabId: tab.id });
 
   if (!result) {
-    // The worker has not finished yet. Ask it to scan now.
+    // The worker has not finished yet.
     const fresh = await chrome.runtime.sendMessage({
       type: "RESCAN",
       tabId: tab.id,
@@ -290,9 +276,7 @@ function showError(message) {
   showView("error");
 }
 
-// ---------------------------------------------------------------------------
-// Buttons
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Buttons.
 
 document.addEventListener("DOMContentLoaded", () => {
   loadCurrentTab();

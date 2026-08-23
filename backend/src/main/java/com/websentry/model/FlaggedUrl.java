@@ -5,11 +5,7 @@ import java.time.Instant;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-/**
- * A short summary row for the dashboard: "most flagged websites".
- * One row per domain, with a counter, so the dashboard does not have to count
- * thousands of scan records every time it loads.
- */
+/** A short summary row for the dashboard: "most flagged websites". */
 @Document(collection = "flaggedUrls")
 public class FlaggedUrl {
 

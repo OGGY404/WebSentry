@@ -11,13 +11,7 @@ import com.websentry.repository.InMemoryScanStore;
 import com.websentry.repository.MongoScanStore;
 import com.websentry.repository.ScanStore;
 
-/**
- * Chooses where scans are saved.
- *
- * If MONGODB_URI has a value we use MongoDB. If it is blank we fall back to the
- * in-memory store so the demo still runs offline. This is checked once at
- * startup and logged clearly, so it is never a surprise during the demo.
- */
+/** Chooses where scans are saved. */
 @Configuration
 public class StorageConfig {
 

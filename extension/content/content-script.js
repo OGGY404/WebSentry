@@ -1,16 +1,4 @@
-/**
- * WebSentry content script.
- *
- * This runs inside the web page itself, which lets it see things the backend
- * cannot see from outside:
- *
- *   - files loaded over http inside a secure https page (mixed content)
- *   - password boxes on a page that is not encrypted
- *   - login forms that send your details to a different website
- *
- * It only reads the page. It never changes it and never sends the page content
- * anywhere: only a small summary of what was found goes to the extension.
- */
+/** WebSentry content script. */
 
 (function () {
   "use strict";
@@ -47,10 +35,7 @@
     return document.querySelector('input[type="password"]') !== null;
   }
 
-  /**
-   * Finds login forms that send your details to a different website.
-   * This is a common trick on fake login pages.
-   */
+  /** Finds login forms that send your details to a different website. */
   function findCrossSiteForms() {
     const found = [];
     const here = window.location.hostname;
@@ -97,12 +82,10 @@
       chrome.runtime.sendMessage({ type: "PAGE_FINDINGS", findings: collectFindings() });
     } catch (error) {
       // This happens if the extension was reloaded while the page was open.
-      // Nothing useful can be done, so we stay quiet rather than break the page.
     }
   }
 
-  // Report once now, and once more shortly after, because many pages load more
-  // files after the first paint.
+  // Report twice, because many pages load more files after the first paint.
   report();
   setTimeout(report, 2000);
 })();

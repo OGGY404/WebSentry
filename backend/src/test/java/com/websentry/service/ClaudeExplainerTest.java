@@ -12,17 +12,7 @@ import com.websentry.config.WebSentryProperties;
 import com.websentry.model.RiskAssessment;
 import com.websentry.model.RuleChecks;
 
-/**
- * Tests for the built-in template explanation.
- *
- * The template is what users read whenever the Claude API is switched off or
- * does not answer, so it has to make sense on its own. The important rule is
- * that the words must never disagree with the score: telling someone a site is
- * safe while listing reasons it is dangerous, or the other way round, makes the
- * whole report untrustworthy.
- *
- * No API key is set in these tests, so no network call is made.
- */
+/** Tests for the built-in template explanation. */
 class ClaudeExplainerTest {
 
     private final ClaudeExplainer explainer = new ClaudeExplainer(new WebSentryProperties());
@@ -57,8 +47,7 @@ class ClaudeExplainerTest {
     @Test
     @DisplayName("A low score never claims the address looks like a fake website")
     void lowScoreDoesNotContradictItself() {
-        // This is the real bug this test protects against: a site scored 8 that
-        // was described as following a pattern used by fake websites.
+        // This is the real bug this test protects against: a site scored 8 that was described as.
         String text = explainer.template(suspiciousOnly(), risk(8));
 
         assertTrue(text.contains("passed the main safety checks"));
@@ -69,8 +58,7 @@ class ClaudeExplainerTest {
     @Test
     @DisplayName("A warning score never claims there were no problems")
     void warningScoreDoesNotClaimEverythingIsFine() {
-        // The other half of the same bug: a site scored 69 that was described
-        // as having no clear security problems.
+        // The other half of the same bug: a site scored 69 described as having no problems.
         String text = explainer.template(clean(), risk(69));
 
         assertFalse(text.contains("did not find any security problems"));
@@ -111,7 +99,7 @@ class ClaudeExplainerTest {
     void explanationStaysShort() {
         String text = explainer.template(dangerous(), risk(100));
 
-        // Two or three sentences. A long wall of text is not read by anyone.
+        // Two or three sentences.
         assertTrue(text.length() < 400, "explanation was " + text.length() + " characters");
     }
 }

@@ -18,13 +18,7 @@ import com.websentry.config.WebSentryProperties;
 import com.websentry.model.ScanRecord;
 import com.websentry.repository.ScanStore;
 
-/**
- * Works out the numbers shown on the admin dashboard.
- *
- * The counting is done in Java rather than with database aggregation because a
- * student demo holds a small number of records and this is far easier to read
- * and to explain in the report.
- */
+/** Works out the numbers shown on the admin dashboard. */
 @Service
 public class StatsService {
 
@@ -87,10 +81,7 @@ public class StatsService {
         return series;
     }
 
-    /**
-     * Passes through the model metrics from the ML service, so the dashboard can
-     * show accuracy, precision, recall and F1 without a second copy of the data.
-     */
+    /** Passes the model figures through from the ML service. */
     @SuppressWarnings("unchecked")
     public Map<String, Object> modelInfo() {
         try {

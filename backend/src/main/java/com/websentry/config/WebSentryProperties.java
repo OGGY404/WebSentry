@@ -2,17 +2,11 @@ package com.websentry.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * All WebSentry settings in one place. The values come from application.properties,
- * which reads them from environment variables (see .env.example).
- *
- * Keys are never written in code. A blank key means the feature turns itself off
- * instead of breaking the scan.
- */
+/** All WebSentry settings in one place. */
 @ConfigurationProperties(prefix = "websentry")
 public class WebSentryProperties {
 
-    /** "ml" = Version B (our model scores, Claude explains). "llm" = Version A. */
+    /** "ml" = Version B (our model scores, Claude explains). */
     private String scorer = "ml";
 
     /** How long a scan result is reused for the same domain, in seconds. */
@@ -126,7 +120,7 @@ public class WebSentryProperties {
         }
     }
 
-    /** Google Safe Browsing. Optional on purpose: the scan works without it. */
+    /** Google Safe Browsing. */
     public static class SafeBrowsing {
         private String apiKey = "";
         private int timeoutMs = 2000;

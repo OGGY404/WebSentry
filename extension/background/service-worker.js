@@ -1,13 +1,4 @@
-/**
- * WebSentry background service worker.
- *
- * This is the part that runs on its own. When you open or change a tab it
- * sends the address to the backend, saves the answer, colours the toolbar
- * badge, and warns you if the website is dangerous.
- *
- * In Manifest V3 this worker is stopped when it is idle, so nothing important
- * is kept in normal variables. Everything is written to chrome.storage.
- */
+/** WebSentry background service worker. */
 
 const DEFAULT_BACKEND = "http://127.0.0.1:8080";
 
@@ -23,17 +14,14 @@ const BAND_COLOURS = {
   HIGH: "#ef4444"
 };
 
-// ---------------------------------------------------------------------------
-// Small storage helpers
-// ---------------------------------------------------------------------------
+// Storage helpers
 
 async function getSettings() {
   const stored = await chrome.storage.local.get(["backendUrl", "clientId", "enabled"]);
 
   let clientId = stored.clientId;
   if (!clientId) {
-    // An anonymous id, made on this computer. It is not linked to a name or an
-    // email, because the ethics form says no personal data is collected.
+    // An anonymous id, made on this computer.
     clientId = crypto.randomUUID();
     await chrome.storage.local.set({ clientId });
   }
@@ -73,9 +61,7 @@ async function addToHistory(record) {
   await chrome.storage.local.set({ history: history.slice(0, HISTORY_LIMIT) });
 }
 
-// ---------------------------------------------------------------------------
-// Badge
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Badge.
 
 async function setBadge(tabId, state, record) {
   if (state === "scanning") {
@@ -100,9 +86,7 @@ async function setBadge(tabId, state, record) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Warning for dangerous websites
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Warning for.
 
 async function warnIfDangerous(record) {
   if (record.riskBand !== "HIGH") {
@@ -122,19 +106,14 @@ async function warnIfDangerous(record) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Scanning
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Scanning.
 
 /** True for addresses we can actually check. */
 function isScannable(url) {
   return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"));
 }
 
-/**
- * @param force true when the user pressed "Check again", so the saved answer
- *              is ignored and the website is checked from the start.
- */
+/** force is true when the user pressed Check again, so the saved answer is ignored. */
 async function scanUrl(tabId, url, force = false) {
   const settings = await getSettings();
   if (!settings.enabled) {
@@ -187,9 +166,7 @@ async function scanUrl(tabId, url, force = false) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Browser events
-// ---------------------------------------------------------------------------
 
 // Fires when a page has finished loading in a tab.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -208,7 +185,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
       await setBadge(tabId, "off");
     }
   } catch (error) {
-    // The tab may already be gone. Nothing to do.
+    // The tab may already be gone.
   }
 });
 
@@ -217,9 +194,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   chrome.storage.session.remove(`tab:${tabId}`);
 });
 
-// ---------------------------------------------------------------------------
 // Messages from the popup and the content script
-// ---------------------------------------------------------------------------
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "GET_RESULT") {
@@ -235,8 +210,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "PAGE_FINDINGS") {
-    // The content script tells us what it saw in the real page. This is stored
-    // next to the scan so the popup can show it.
+    // The content script tells us what it saw in the real page.
     const tabId = sender.tab && sender.tab.id;
     if (tabId !== undefined) {
       chrome.storage.session.set({ [`page:${tabId}`]: message.findings });

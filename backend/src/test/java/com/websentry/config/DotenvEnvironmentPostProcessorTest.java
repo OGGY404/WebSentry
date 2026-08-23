@@ -16,16 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.env.MockEnvironment;
 
-/**
- * Tests for reading the .env file.
- *
- * The reader is tested directly with a file of our own, because the folder
- * search in the real class cannot be redirected: Java decides the working
- * folder when it starts and it cannot be changed afterwards.
- *
- * The behaviour that matters most is that a blank value is ignored. A key that
- * is quietly wrong is harder to find than one that fails loudly.
- */
+/** Tests for reading the .env file. */
 class DotenvEnvironmentPostProcessorTest {
 
     private final DotenvEnvironmentPostProcessor processor = new DotenvEnvironmentPostProcessor();
@@ -68,9 +59,7 @@ class DotenvEnvironmentPostProcessorTest {
     @Test
     @DisplayName("A blank value is ignored so it cannot hide a real setting")
     void blankValuesAreIgnored() throws IOException {
-        // The case that matters. MONGODB_URI= means "not set". Read as an empty
-        // string it would override a real environment variable and the database
-        // would switch off with nothing explaining why.
+        // The case that matters.
         Map<String, Object> values = parse("""
                 MONGODB_URI=
                 ANTHROPIC_API_KEY=sk-ant-example

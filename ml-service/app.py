@@ -1,19 +1,4 @@
-"""
-WebSentry ML service.
-
-Internal FastAPI service that turns a URL into a 0-100 risk score. Called by
-the Spring Boot backend's MlRiskScorer; not exposed to the browser extension
-directly.
-
-Run:
-    cd ml-service
-    uvicorn app:app --host 127.0.0.1 --port 8000
-
-Contract (CLAUDE.md section 8):
-    POST /predict      -> riskScore, confidence, topFeatures
-    GET  /model/info   -> model version, training date, metrics
-    GET  /health       -> liveness
-"""
+"""WebSentry ML service."""
 
 from __future__ import annotations
 
@@ -86,8 +71,7 @@ def health() -> dict:
 
 @app.post("/predict")
 def predict(request: PredictRequest) -> dict:
-    """Score a single URL. Latency is logged so the figures can feed the
-    performance section of the evaluation chapter."""
+    """Score a single URL."""
     model = _require_model()
     started = time.perf_counter()
     result = model.score(request.url)
@@ -100,8 +84,7 @@ def predict(request: PredictRequest) -> dict:
 
 @app.post("/predict/batch")
 def predict_batch(request: PredictBatchRequest) -> dict:
-    """Batch scoring, used by evaluation/run_eval.py so the 400-URL run does
-    not pay per-request overhead 400 times."""
+    """Batch scoring, used by the evaluation run."""
     model = _require_model()
     started = time.perf_counter()
     results = [model.score(url) | {"url": url} for url in request.urls]
@@ -114,8 +97,7 @@ def predict_batch(request: PredictBatchRequest) -> dict:
 
 @app.post("/features")
 def features(request: PredictRequest) -> dict:
-    """Expose the raw feature dictionary. Used for the feature engineering
-    discussion in the report and for debugging odd scores."""
+    """Expose the raw feature dictionary."""
     return {"url": request.url, "features": extract_features(request.url)}
 
 

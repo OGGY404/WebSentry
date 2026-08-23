@@ -1,7 +1,4 @@
-/**
- * All calls to the WebSentry backend live here, so the screens themselves stay
- * simple and there is one place to change if an address changes.
- */
+/** All calls to the backend live here, so the screens stay simple. */
 
 const BASE = "/api/v1";
 

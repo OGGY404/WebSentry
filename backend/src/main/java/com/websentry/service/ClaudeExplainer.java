@@ -18,17 +18,7 @@ import com.websentry.model.RiskAssessment;
 import com.websentry.model.RuleChecks;
 import com.websentry.model.TopFeature;
 
-/**
- * Writes the explanation the user reads in the popup.
- *
- * Important: Claude does NOT decide the score here. It is given the findings
- * and the score, and only puts them into simple words. The prompt tells it not
- * to disagree with the score and not to invent anything.
- *
- * If the API key is missing, or the call fails, or it is too slow, we use a
- * built-in template instead. The user must never see an error or a blank box
- * just because an outside service is down.
- */
+/** Writes the explanation the user reads in the popup. */
 @Service
 public class ClaudeExplainer implements Explainer {
 
@@ -48,10 +38,7 @@ public class ClaudeExplainer implements Explainer {
             - Speak plainly about what this means for the person, and what to do.
             """;
 
-    /**
-     * Explanations are reused for the same domain, band and set of findings, so
-     * we do not pay for the same sentence again and again.
-     */
+    /** The same wording is reused for the same site and findings, so we do not pay twice. */
     private final Map<String, String> cache = new ConcurrentHashMap<>();
     private static final int MAX_CACHE_ENTRIES = 2000;
 
@@ -127,7 +114,7 @@ public class ClaudeExplainer implements Explainer {
             return new Explanation(text, true);
 
         } catch (Exception e) {
-            // Any failure at all falls back to the template. The scan still works.
+            // Any failure at all falls back to the template.
             log.warn("Claude explanation failed, using template instead: {}", e.toString());
             return new Explanation(template(checks, risk), false);
         }
@@ -172,10 +159,7 @@ public class ClaudeExplainer implements Explainer {
         return text.toString();
     }
 
-    /**
-     * The built-in fallback. It only repeats facts we actually measured, so it
-     * can never say something untrue about the website.
-     */
+    /** The built-in fallback. */
     String template(RuleChecks checks, RiskAssessment risk) {
         List<String> problems = new ArrayList<>();
         if (checks.inPhishingDb()) {
@@ -196,9 +180,7 @@ public class ClaudeExplainer implements Explainer {
         boolean lowRisk = "LOW".equals(risk.riskBand());
         StringBuilder text = new StringBuilder();
 
-        // The wording must always agree with the score. Saying "no problems
-        // found" next to a warning, or listing problems next to a safe verdict,
-        // makes the report confusing and untrustworthy.
+        // The wording must always agree with the score.
         if (lowRisk && problems.isEmpty()) {
             text.append("We did not find any security problems with this website. ")
                     .append("The connection is encrypted and the address looks normal. ");
@@ -232,10 +214,7 @@ public class ClaudeExplainer implements Explainer {
         return head + " and " + items.get(items.size() - 1);
     }
 
-    /**
-     * Same domain, same band and same findings means the same explanation, so
-     * the cached text can be reused safely.
-     */
+    /** Same site, same band and same findings means the saved wording can be reused. */
     private String cacheKey(String url, RuleChecks checks, RiskAssessment risk) {
         String domain = UrlUtils.domainOf(url);
         int checksHash = (checks.https() ? 1 : 0)

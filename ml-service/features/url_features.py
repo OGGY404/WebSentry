@@ -1,25 +1,4 @@
-"""
-Hostname feature extraction for WebSentry.
-
-DESIGN NOTE (important, and explained in the methodology chapter)
------------------------------------------------------------------
-This extractor deliberately reads the HOSTNAME ONLY. It ignores the path, the
-query string and the URL scheme.
-
-The reason is a measured dataset artefact, not a style preference. In the
-PhiUSIIL corpus, 100% of legitimate URLs are bare HTTPS homepages with an empty
-path, while phishing samples are full URLs. A classifier given path_length and
-is_https therefore reaches 99.5% accuracy by learning how the corpus was
-collected rather than what phishing looks like, and it misclassifies any
-ordinary deep link such as https://www.google.com/search?q=test as phishing.
-Restricting the model to the hostname removes that shortcut and produces an
-honest result that generalises.
-
-Transport and certificate signals are NOT inferred here. HTTPS availability,
-SSL certificate validity, issuer and expiry are measured live by the Spring Boot
-rule engine at scan time and combined with this model's score downstream. That
-is both more accurate and more defensible than reading them off a URL string.
-"""
+"""Hostname feature extraction for WebSentry."""
 
 from __future__ import annotations
 
@@ -28,8 +7,7 @@ import re
 from collections import Counter
 from urllib.parse import urlparse
 
-# Order defines the lexical feature vector layout. Do not reorder without
-# retraining, as the persisted model depends on this ordering.
+# Order defines the lexical feature vector layout.
 FEATURE_NAMES = [
     "hostname_length",
     "registrable_domain_length",
@@ -51,8 +29,7 @@ FEATURE_NAMES = [
     "max_consonant_run",
 ]
 
-# Human-readable labels used when a feature is surfaced to the Claude explainer
-# or the admin dashboard. Keeps jargon out of the user-facing layer.
+# Readable labels, shown when a feature is named to the user.
 FEATURE_LABELS = {
     "hostname_length": "unusually long web address",
     "registrable_domain_length": "unusually long domain name",
@@ -75,17 +52,6 @@ FEATURE_LABELS = {
 }
 
 # The smallest value a feature must reach before its label may be shown to a user.
-#
-# Why this is needed: the model is scaled with MaxAbsScaler, which divides by the
-# largest value but never subtracts the average. Every scaled value therefore
-# stays positive, so any feature with a positive weight looks like it is pushing
-# the URL towards phishing even when its value is tiny. Without these limits
-# lnkd.in, a hostname of seven characters, was described to the user as having
-# an "unusually long web address".
-#
-# Every label above is a claim about the address in plain English. These numbers
-# are the point at which that claim is actually true. They only decide which
-# reasons are NAMED. The risk score itself is not affected.
 NAMING_THRESHOLDS = {
     "hostname_length": 25,
     "registrable_domain_length": 20,
@@ -134,8 +100,7 @@ SUSPICIOUS_KEYWORDS = [
     "wallet", "authenticate", "session", "support", "alert", "limited",
 ]
 
-# Impersonated brands, flagged only when they appear outside the registrable
-# domain: the classic paypal.com.attacker.xyz pattern.
+# Brands, flagged only when they appear outside the real domain.
 BRANDS = [
     "paypal", "apple", "microsoft", "google", "amazon", "facebook", "netflix",
     "instagram", "whatsapp", "linkedin", "dropbox", "outlook", "office365",
@@ -144,8 +109,7 @@ BRANDS = [
     "lloyds", "natwest", "revolut", "monzo",
 ]
 
-# Two-level public suffixes, so the registrable domain can be found without a
-# network lookup.
+# Two part endings such as co.uk, so the real domain can be found offline.
 MULTI_PART_SUFFIXES = {
     "co.uk", "org.uk", "ac.uk", "gov.uk", "me.uk", "net.uk", "sch.uk",
     "com.au", "net.au", "org.au", "edu.au", "gov.au",
@@ -167,8 +131,7 @@ _VOWELS = set("aeiou")
 
 
 def _shannon_entropy(text: str) -> float:
-    """Character level Shannon entropy. Algorithmically generated hostnames
-    score higher than human chosen brand names."""
+    """Character level Shannon entropy."""
     if not text:
         return 0.0
     counts = Counter(text)
@@ -177,8 +140,7 @@ def _shannon_entropy(text: str) -> float:
 
 
 def _max_consonant_run(text: str) -> int:
-    """Longest run of consecutive consonants. Generated domains such as
-    'xkfjqbnt' produce long runs; pronounceable brand names rarely do."""
+    """Longest run of consecutive consonants."""
     best = run = 0
     for ch in text:
         if ch.isalpha() and ch not in _VOWELS:
@@ -190,8 +152,7 @@ def _max_consonant_run(text: str) -> int:
 
 
 def _normalise(url: str) -> str:
-    """Ensure a scheme is present so urlparse populates netloc. The scheme
-    itself is never used as a feature."""
+    """Ensure a scheme is present so urlparse populates netloc."""
     url = (url or "").strip()
     if not url:
         return ""
@@ -212,8 +173,7 @@ def _registrable_domain(hostname: str) -> str:
 
 
 def hostname_of(url: str) -> str:
-    """Lowercase hostname for a URL, or an empty string if unparseable.
-    This is the only text the model ever sees."""
+    """Lowercase hostname for a URL, or an empty string if unparseable."""
     try:
         return (urlparse(_normalise(url)).hostname or "").lower()
     except ValueError:
@@ -221,12 +181,7 @@ def hostname_of(url: str) -> str:
 
 
 def extract_features(url: str) -> dict[str, float]:
-    """Return the lexical feature dictionary for a URL's hostname.
-
-    Never raises: an unparseable URL yields an all zero vector, so a bad input
-    degrades to a low information sample rather than breaking a batch job or a
-    live scan.
-    """
+    """Return the lexical feature dictionary for a URL's hostname."""
     host = hostname_of(url)
     if not host:
         return {name: 0.0 for name in FEATURE_NAMES}

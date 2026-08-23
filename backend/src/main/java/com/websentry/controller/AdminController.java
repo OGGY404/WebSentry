@@ -18,12 +18,7 @@ import com.websentry.repository.PagedScans;
 import com.websentry.repository.ScanStore;
 import com.websentry.service.StatsService;
 
-/**
- * The endpoints the React dashboard calls.
- *
- * There is one hardcoded admin account, as agreed when the scope was reduced.
- * This is a documented limitation, not a security design.
- */
+/** The endpoints the React dashboard calls. */
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminController {

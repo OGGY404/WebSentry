@@ -2,14 +2,7 @@ package com.websentry.model;
 
 import java.util.List;
 
-/**
- * The risk score for one URL.
- *
- * Score runs 0 to 100 where 0 is safe and 100 is dangerous.
- * Bands: LOW 0-39, MEDIUM 40-69, HIGH 70-100.
- *
- * @param source which engine produced this, "ml" or "llm" or "rules-only"
- */
+/** The risk score for one URL. */
 public record RiskAssessment(
         int riskScore,
         String riskBand,

@@ -10,13 +10,7 @@ import org.springframework.web.client.RestClient;
 
 import com.websentry.config.WebSentryProperties;
 
-/**
- * Asks Google Safe Browsing whether a URL is already known to be dangerous.
- *
- * This check is optional on purpose. If no API key is set, or Google does not
- * answer, we return false and the scan continues using the rule checks and the
- * ML model. A missing key must never stop the system from working.
- */
+/** Asks Google Safe Browsing whether a URL is already known to be dangerous. */
 @Service
 public class SafeBrowsingClient {
 

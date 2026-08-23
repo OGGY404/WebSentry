@@ -2,12 +2,7 @@ import { useState } from "react";
 
 import { login } from "../api.js";
 
-/**
- * The single admin sign in screen.
- *
- * There is one hardcoded account, which was agreed when the project scope was
- * reduced. It is written up as a limitation, not as a security design.
- */
+/** The single admin sign in screen. */
 export default function Login({ onSignedIn }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");

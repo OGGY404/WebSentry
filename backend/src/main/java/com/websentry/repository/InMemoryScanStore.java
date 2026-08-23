@@ -12,12 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.websentry.model.FlaggedUrl;
 import com.websentry.model.ScanRecord;
 
-/**
- * Keeps scans in memory only. Everything is lost when the backend stops.
- *
- * This exists so the browser extension demo still works when MongoDB is not
- * reachable. It is not the real store and is never used when MONGODB_URI is set.
- */
+/** Keeps scans in memory only. */
 public class InMemoryScanStore implements ScanStore {
 
     /** Keeps the newest scans only, so a long demo cannot fill up memory. */

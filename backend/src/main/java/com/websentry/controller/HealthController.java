@@ -11,10 +11,7 @@ import com.websentry.config.WebSentryProperties;
 import com.websentry.repository.ScanStore;
 import com.websentry.service.ScanService;
 
-/**
- * Tells you at a glance which parts are switched on. Useful before the demo:
- * one call shows whether the database, Claude and Safe Browsing are all live.
- */
+/** Tells you at a glance which parts are switched on. */
 @RestController
 @RequestMapping("/api/v1")
 public class HealthController {

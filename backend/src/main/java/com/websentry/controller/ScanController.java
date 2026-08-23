@@ -28,12 +28,7 @@ public class ScanController {
         this.scanService = scanService;
     }
 
-    /**
-     * Scan one website and return the full result.
-     *
-     * @param live set to false to skip opening the website. The evaluation
-     *             script uses this so its results can be repeated exactly.
-     */
+    /** Scan one website and return the full result. */
     @PostMapping("/scan")
     public ScanRecord scan(@Valid @RequestBody ScanRequest request,
                            @RequestParam(defaultValue = "true") boolean live) {

@@ -13,13 +13,7 @@ import com.websentry.config.WebSentryProperties;
 import com.websentry.model.RiskAssessment;
 import com.websentry.model.TopFeature;
 
-/**
- * Version B scorer. Sends the URL to the Python ML service and reads back the
- * score produced by the trained classifier.
- *
- * If the ML service is not running the scan does not fail. We return a neutral
- * score and mark the source, so the rule checks still decide the outcome.
- */
+/** Version B scorer. */
 @Component
 public class MlRiskScorer implements RiskScorer {
 
@@ -76,10 +70,7 @@ public class MlRiskScorer implements RiskScorer {
         return "ml";
     }
 
-    /**
-     * Used when the ML service cannot be reached. A score of 0 means the model
-     * adds nothing, so the final score comes from the rule checks alone.
-     */
+    /** Used when the ML service cannot be reached. */
     private RiskAssessment unavailable(String source) {
         return new RiskAssessment(0, "LOW", RiskAssessment.recommendationFor("LOW"),
                 0.0, List.of(), "unavailable", source);

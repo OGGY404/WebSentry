@@ -3,12 +3,7 @@ import { useEffect, useState } from "react";
 import { getModel } from "../api.js";
 import { percent } from "../format.js";
 
-/**
- * How well the trained model performs.
- *
- * These numbers come from the ML service, which reads them from the file saved
- * during training. Showing them here means there is only one copy of the truth.
- */
+/** How well the trained model performs. */
 export default function ModelPanel() {
   const [model, setModel] = useState(null);
   const [error, setError] = useState("");

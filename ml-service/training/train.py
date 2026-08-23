@@ -1,23 +1,4 @@
-"""
-Train the WebSentry URL risk classifier.
-
-Three models are trained and compared, which gives the methodology chapter a
-genuine comparison rather than a single unexplained choice:
-
-    1. Random Forest on lexical hostname features   (the baseline)
-    2. XGBoost on lexical hostname features         (the challenger)
-    3. Logistic Regression on character n-grams plus lexical features (hybrid)
-
-The hybrid follows the URL-representation-learning idea from Le et al. (2018),
-already cited in Chapter 2, but uses classical TF-IDF n-grams rather than a
-deep network so that it trains on CPU in seconds and stays explainable.
-
-This script loads train_pool.csv only. It never reads eval_set_400.csv, so the
-frozen evaluation set stays genuinely unseen.
-
-Run:
-    python ml-service/training/train.py
-"""
+"""Train the WebSentry URL risk classifier."""
 
 from __future__ import annotations
 
@@ -99,8 +80,7 @@ def main() -> int:
     print(f"Loading {TRAIN_POOL.name} ...")
     df = pd.read_csv(TRAIN_POOL)
 
-    # Balance by downsampling the majority class so that accuracy is meaningful
-    # rather than an artefact of class skew.
+    # Balance the two classes, so accuracy is meaningful.
     phishing = df[df.is_phishing == 1]
     legitimate = df[df.is_phishing == 0]
     n = min(len(phishing), len(legitimate))
@@ -179,8 +159,7 @@ def main() -> int:
     hybrid.fit(X_hyb_train, y_train)
     results["Hybrid"] = evaluate("Hybrid (n-grams + lexical)", hybrid, X_hyb_test, y_test)
 
-    # Select on F1, which balances the cost of a missed phishing site against
-    # the cost of a false alarm on a legitimate one.
+    # Choose on F1, which balances missed phishing against false alarms.
     winner_key = max(results, key=lambda k: results[k]["f1"])
     print(f"\nSelected model: {results[winner_key]['model']} (highest F1)")
 

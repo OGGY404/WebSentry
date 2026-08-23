@@ -9,20 +9,11 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * Web setup: who is allowed to call the API, and the HTTP client used to call
- * the ML service and Claude.
- */
+/** Who is allowed to call the API, and the timeouts for outside calls. */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    /**
-     * The browser extension calls this API from a chrome-extension:// page, and
-     * the React dashboard calls it from localhost. Both need CORS permission.
-     *
-     * allowedOriginPatterns is used because a plain "*" is rejected once
-     * credentials are involved, and extension origins are not fixed strings.
-     */
+    /** Lets the extension and the dashboard call this API. */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
@@ -33,13 +24,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .maxAge(3600);
     }
 
-    /**
-     * Gives every RestClient a connect and read timeout. Without this a slow
-     * external API could hold a scan open far past the one second target.
-     *
-     * Spring Boot builds the RestClient.Builder itself and applies this
-     * customizer to it, so we must not create a builder bean of our own.
-     */
+    /** Gives every RestClient a connect and read timeout. */
     @Bean
     public RestClientCustomizer restClientTimeouts() {
         return builder -> {

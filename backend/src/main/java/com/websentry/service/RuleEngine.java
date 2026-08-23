@@ -24,13 +24,7 @@ import org.springframework.stereotype.Service;
 
 import com.websentry.model.RuleChecks;
 
-/**
- * The rule engine. It measures real facts about a website:
- * HTTPS, the SSL certificate, mixed content, and suspicious address patterns.
- *
- * This part uses no AI and no external API key, so it always works. If the
- * network call fails we still return the checks we could do from the address.
- */
+/** The rule engine. */
 @Service
 public class RuleEngine {
 
@@ -39,17 +33,14 @@ public class RuleEngine {
     private static final int CONNECT_TIMEOUT_MS = 3000;
     private static final int READ_TIMEOUT_MS = 4000;
 
-    /** Stop reading the page after this many characters. We only need the tags. */
+    /** Stop reading the page after this many characters. */
     private static final int MAX_BODY_CHARS = 300_000;
 
     /** A raw IP address used as the host, like http://192.168.1.1/login. */
     private static final Pattern IP_HOST =
             Pattern.compile("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
 
-    /**
-     * An http file loaded inside a page. Only sub-resources count as mixed
-     * content, so a plain link to an http page is not matched here.
-     */
+    /** An http file loaded inside a page. */
     private static final Pattern MIXED_CONTENT = Pattern.compile(
             "<\\s*(?:img|script|iframe|link|audio|video|source|embed|object)\\b[^>]*?"
                     + "\\b(?:src|href|data)\\s*=\\s*[\"']http://",
@@ -65,7 +56,7 @@ public class RuleEngine {
             "login", "signin", "verify", "verification", "secure", "account",
             "update", "banking", "confirm", "password", "wallet", "recover", "unlock");
 
-    /** Well known brands. Seeing these outside the real domain is a warning sign. */
+    /** Well known brands. */
     private static final Set<String> BRANDS = Set.of(
             "paypal", "apple", "google", "microsoft", "amazon", "facebook",
             "netflix", "instagram", "whatsapp", "outlook", "office365", "dhl", "fedex");
@@ -74,15 +65,7 @@ public class RuleEngine {
             "bit.ly", "tinyurl.com", "goo.gl", "t.co", "ow.ly", "is.gd",
             "buff.ly", "cutt.ly", "rebrand.ly", "shorturl.at");
 
-    /**
-     * Run every check for one URL.
-     *
-     * @param safeBrowsingHit  true if Google Safe Browsing already said this URL is bad
-     * @param performLiveChecks true to open the website and read its certificate.
-     *        The evaluation script turns this off, because most phishing URLs in a
-     *        test set are already dead and waiting for them would make the run slow
-     *        and impossible to repeat with the same result.
-     */
+    /** Run every check for one URL. */
     public RuleChecks check(String url, boolean safeBrowsingHit, boolean performLiveChecks) {
         List<String> reasons = new ArrayList<>();
 
@@ -102,10 +85,10 @@ public class RuleEngine {
             reasons.add("The connection is not encrypted, so anything you type could be read by others.");
         }
 
-        // Address checks first. These never touch the network.
+        // Address checks first.
         boolean suspiciousPattern = checkAddressPatterns(uri, host, reasons);
 
-        // Now the live checks. These need the site to answer.
+        // Now the live checks.
         CertificateResult cert = new CertificateResult(false, null, null);
         boolean mixedContent = false;
 
@@ -114,8 +97,7 @@ public class RuleEngine {
             cert = live.certificate();
             mixedContent = live.mixedContent();
         } else if (!performLiveChecks && https) {
-            // We did not open the site, so we must not claim the certificate is
-            // broken. Treat it as valid so the score is not unfairly increased.
+            // We did not open the site, so we must not claim the certificate is broken.
             cert = new CertificateResult(true, null, null);
         }
 
@@ -180,8 +162,7 @@ public class RuleEngine {
             suspicious = true;
         }
 
-        // A brand name that is not the actual registered domain, for example
-        // paypal.secure-login.xyz. The real domain there is secure-login.xyz.
+        // A brand name outside the real domain, such as paypal.secure-login.xyz.
         String registrable = registrableDomain(labels);
         for (String brand : BRANDS) {
             if (host.contains(brand) && !registrable.startsWith(brand + ".")) {
@@ -204,10 +185,7 @@ public class RuleEngine {
         return suspicious;
     }
 
-    /**
-     * Opens the site once to read the certificate and to look for mixed content.
-     * One connection is used for both so the scan stays fast.
-     */
+    /** Opens the site once to read the certificate and to look for mixed content. */
     private LiveResult inspectLiveSite(String url, List<String> reasons) {
         HttpsURLConnection connection = null;
         long started = System.nanoTime();
@@ -228,15 +206,13 @@ public class RuleEngine {
             return new LiveResult(cert, mixed);
 
         } catch (javax.net.ssl.SSLException e) {
-            // The certificate was rejected. This is a real security finding,
-            // not just a failed scan, so we say so in plain words.
+            // The certificate was rejected.
             reasons.add("The security certificate could not be trusted.");
             log.info("SSL problem for {}: {}", url, e.getMessage());
             return new LiveResult(new CertificateResult(false, null, null), false);
 
         } catch (Exception e) {
-            // The site did not answer. We cannot call this safe or unsafe,
-            // so we record it and let the other checks decide.
+            // The site did not answer.
             reasons.add("The website did not respond, so live checks could not be completed.");
             log.info("Could not reach {}: {}", url, e.toString());
             return new LiveResult(new CertificateResult(false, null, null), false);

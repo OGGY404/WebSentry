@@ -15,15 +15,7 @@ import com.anthropic.models.messages.MessageCreateParams;
 import com.websentry.config.WebSentryProperties;
 import com.websentry.model.RiskAssessment;
 
-/**
- * Version A scorer: Claude decides the score as well as the wording.
- *
- * This is kept so the original proposal architecture can still be demonstrated
- * and compared. Version B (MlRiskScorer) is the committed design because the
- * accuracy figure has to be something the project owns and can defend.
- *
- * Switch with WEBSENTRY_SCORER=llm in the .env file.
- */
+/** Version A scorer: Claude decides the score as well as the wording. */
 @Component
 public class LlmRiskScorer implements RiskScorer {
 

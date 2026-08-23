@@ -13,13 +13,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import com.websentry.model.FlaggedUrl;
 import com.websentry.model.ScanRecord;
 
-/**
- * The real store. Saves every scan in MongoDB Atlas.
- *
- * MongoTemplate is used instead of a repository interface because the flagged
- * summary needs an upsert (add one to a counter, or create the row if it is
- * the first time we see this domain).
- */
+/** The real store. */
 public class MongoScanStore implements ScanStore {
 
     private final MongoTemplate mongo;

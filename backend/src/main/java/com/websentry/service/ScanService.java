@@ -17,19 +17,7 @@ import com.websentry.model.RuleChecks;
 import com.websentry.model.ScanRecord;
 import com.websentry.repository.ScanStore;
 
-/**
- * Runs one complete scan, in this order:
- *
- *   1. Ask Google Safe Browsing if the address is already known to be bad.
- *   2. Run the rule checks (HTTPS, certificate, mixed content, address patterns).
- *   3. Ask the scoring engine for a 0-100 score.
- *   4. Join the score and the rules into the final score.
- *   5. Ask Claude to write the explanation, or use the template if that fails.
- *   6. Save the record and update the flagged summary.
- *
- * Results are cached per domain for a short time so browsing around one website
- * does not scan it again on every page.
- */
+/** Runs one scan: threat lookup, rule checks, score, combine, explain, save. */
 @Service
 public class ScanService {
 
@@ -59,8 +47,7 @@ public class ScanService {
         this.store = store;
         this.properties = properties;
 
-        // Pick the engine named in the settings. This is the one line that
-        // switches between Version A and Version B.
+        // Pick the engine named in the settings.
         String wanted = properties.getScorer();
         this.scorer = scorers.stream()
                 .filter(candidate -> candidate.name().equalsIgnoreCase(wanted))
@@ -75,24 +62,13 @@ public class ScanService {
         return scan(rawUrl, clientId, true);
     }
 
-    /**
-     * Scan one URL.
-     *
-     * @param performLiveChecks false to skip opening the website. Used by the
-     *        evaluation script so the run is fast and repeatable.
-     */
+    /** Scan one URL. */
     public ScanRecord scan(String rawUrl, String clientId, boolean performLiveChecks) {
         long started = System.nanoTime();
         String url = UrlUtils.normalise(rawUrl);
         String domain = UrlUtils.domainOf(url);
 
-        // A cached result for the same domain is reused for a short time, so
-        // moving between pages of one website does not scan it again.
-        //
-        // The cache is skipped in evaluation mode. Two different addresses on
-        // the same website must each be scored on their own, otherwise a few
-        // test URLs would silently receive another URL's result and the
-        // measured accuracy would not be exactly reproducible.
+        // Results are reused briefly, so moving around one website does not scan it again.
         if (performLiveChecks) {
             CachedScan cached = cache.get(domain);
             if (cached != null && !cached.isOlderThan(properties.getCacheTtlSeconds())) {
@@ -105,9 +81,7 @@ public class ScanService {
         RuleChecks checks = ruleEngine.check(url, safeBrowsingHit, performLiveChecks);
         RiskAssessment base = scorer.score(url);
         RiskAssessment finalRisk = combiner.combine(base, checks);
-        // Evaluation runs use the template. The wording cannot change the band
-        // being measured, so calling the API 400 times would cost money and add
-        // ten minutes for text that is never read.
+        // Evaluation runs use the template.
         Explanation explanation = explainer.explain(url, checks, finalRisk, performLiveChecks);
 
         long durationMs = (System.nanoTime() - started) / 1_000_000;
@@ -137,8 +111,7 @@ public class ScanService {
                 store.recordFlagged(record);
             }
         } catch (Exception e) {
-            // Saving must never break the user's scan. The extension still gets
-            // its answer; only the history entry is lost.
+            // Saving must never break the user's scan.
             log.error("Could not save the scan for {}: {}", domain, e.toString());
         }
 

@@ -9,12 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import com.websentry.model.RuleChecks;
 
-/**
- * Tests for the rule engine.
- *
- * Live checks are turned off in every test, so no real website is contacted.
- * That keeps the tests fast and gives the same result every time.
- */
+/** Tests for the rule engine. */
 class RuleEngineTest {
 
     private final RuleEngine engine = new RuleEngine();

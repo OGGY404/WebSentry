@@ -1,39 +1,4 @@
-"""
-Build the WebSentry corpus and freeze the evaluation set.
-
-This must be run before any training. It performs three jobs in one pass so
-that the training pool and the evaluation set can never disagree about how the
-data was cleaned:
-
-  1. CLEAN. Removes phishing rows whose full hostname is itself a top-ranked
-     legitimate domain. PhiUSIIL contains phishing pages hosted on legitimate
-     infrastructure, for example a credential form on docs.google.com or an S3
-     bucket. Those full URLs really are malicious, but the hostname is not, and
-     WebSentry's classifier only sees the hostname. Leaving them in teaches the
-     model that Google and Amazon are dangerous, which is exactly the false
-     positive behaviour observed before this step existed. Detection of that
-     attack class is delegated to Google Safe Browsing at scan time and is
-     recorded as a documented limitation.
-
-     Note this matches on the FULL hostname, not the registrable domain, so a
-     randomly generated subdomain such as fkdygcrzga.duckdns.org is retained.
-     Those are genuinely detectable from the hostname and the model should
-     learn them.
-
-  2. AUGMENT. Adds top-ranked real domains to the legitimate class. PhiUSIIL's
-     legitimate samples do not cover many everyday sites (amazon.co.uk had no
-     rows at all), so the model had never seen them. This is the "legitimate
-     URL list for the negative class" specified in CLAUDE.md section 9.
-
-  3. FREEZE. Carves a balanced, held-out 400-URL evaluation set with a SHA-256
-     checksum and writes the remaining pool for training. Training code loads
-     train_pool.csv only.
-
-Run once:
-    python ml-service/training/prepare_data.py
-
-Re-running is refused if the frozen set exists, unless --force is passed.
-"""
+"""Build the WebSentry corpus and freeze the evaluation set."""
 
 from __future__ import annotations
 
@@ -97,9 +62,7 @@ def main() -> int:
 
     print(f"Reading {SOURCE_CSV.name} ...")
     df = pd.read_csv(SOURCE_CSV, usecols=["URL", "label"])
-    # PhiUSIIL encodes 1 = legitimate, 0 = phishing. WebSentry uses the opposite
-    # convention throughout so that high score, positive label and "dangerous"
-    # all point the same way.
+    # PhiUSIIL encodes 1 = legitimate, 0 = phishing.
     df["is_phishing"] = (df["label"] == 0).astype(int)
     df = df[["URL", "is_phishing"]].rename(columns={"URL": "url"})
     df = df.dropna(subset=["url"]).drop_duplicates(subset="url")
@@ -114,15 +77,13 @@ def main() -> int:
     exclude_hosts = set(top.head(TOPSITE_EXCLUDE_N).domain)
     print(f"  top {TOPSITE_EXCLUDE_N:,} hostnames loaded for conflict removal")
 
-    # --- 1. CLEAN ------------------------------------------------------------
+    # --- 1.
     conflict = (df.is_phishing == 1) & (df.host.isin(exclude_hosts))
     removed = int(conflict.sum())
     df = df[~conflict]
     print(f"\nCLEAN: removed {removed:,} phishing rows hosted on top-ranked legitimate hostnames")
 
-    # --- 2. AUGMENT ----------------------------------------------------------
-    # Only add domains that do not already appear anywhere in the corpus, so no
-    # hostname ends up with both labels.
+    # --- 2.
     existing = set(df.host)
     augment = [
         d for d in top.head(LEGIT_AUGMENT_N).domain
@@ -148,7 +109,7 @@ def main() -> int:
     print(f"\nFinal corpus: {len(df):,} rows "
           f"({int(df.is_phishing.sum()):,} phishing, {int((1 - df.is_phishing).sum()):,} legitimate)")
 
-    # --- 3. FREEZE -----------------------------------------------------------
+    # --- 3.
     phishing = df[df.is_phishing == 1]
     legitimate = df[df.is_phishing == 0]
     if len(phishing) < N_PER_CLASS or len(legitimate) < N_PER_CLASS:
@@ -167,8 +128,7 @@ def main() -> int:
     )
     eval_set["source"] = "PhiUSIIL (UCI ID 967) + Cisco Umbrella top-1m"
 
-    # Hold out by HOSTNAME, not just URL. Holding out by URL alone would leave
-    # other URLs on the same host in training, which leaks for a host-only model.
+    # Hold out by HOSTNAME, not just URL.
     held_out_hosts = set(eval_set["host"])
     train_pool = df[~df.host.isin(held_out_hosts)].reset_index(drop=True)
     print(f"\nHeld out {len(held_out_hosts):,} hostnames from training "

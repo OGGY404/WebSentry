@@ -1,12 +1,4 @@
-"""
-Draws the WebSentry shield icon at the sizes Chrome asks for.
-
-Run once from the extension folder:
-    python assets/make_icons.py
-
-The icon is drawn in code rather than saved from a design tool so it can be
-regenerated at any size without needing the original file.
-"""
+"""Draws the WebSentry shield icon at the sizes Chrome asks for."""
 
 from pathlib import Path
 

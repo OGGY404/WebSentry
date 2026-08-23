@@ -10,10 +10,7 @@ public final class UrlUtils {
         // Utility class, never created.
     }
 
-    /**
-     * Adds https:// when the user typed a bare address like "example.com",
-     * so the rest of the code always sees a complete URL.
-     */
+    /** Adds https:// when the user typed a bare address like example.com. */
     public static String normalise(String url) {
         String trimmed = url == null ? "" : url.trim();
         if (trimmed.isEmpty()) {
@@ -25,7 +22,7 @@ public final class UrlUtils {
         return trimmed;
     }
 
-    /** The website name, for example "example.com". Empty if it cannot be read. */
+    /** The website name, for example "example.com". */
     public static String domainOf(String url) {
         try {
             String host = URI.create(normalise(url)).getHost();

@@ -19,8 +19,7 @@ export default function App() {
   const [tab, setTab] = useState("stats");
   const [health, setHealth] = useState(null);
 
-  // Show which parts of the system are switched on, so a demo never starts
-  // with a surprise such as the database being off.
+  // Shows which parts are switched on, so a demo never starts with a surprise.
   useEffect(() => {
     if (username) {
       getHealth().then(setHealth).catch(() => setHealth(null));

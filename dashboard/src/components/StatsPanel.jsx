@@ -20,7 +20,7 @@ export default function StatsPanel() {
 
   const bands = stats.bandCounts || {};
   const series = stats.scansPerDay || [];
-  // The tallest bar sets the scale. Minimum of 1 avoids dividing by zero.
+  // The tallest bar sets the scale.
   const busiestDay = Math.max(1, ...series.map((day) => day.count));
 
   return (
