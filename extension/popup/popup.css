@@ -417,3 +417,49 @@ body {
   margin: 8px 0 0;
   text-align: center;
 }
+
+/* --- Diagnostics shown when a scan fails --------------------------------- */
+
+.diagnostics {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.diagnostics .section-title {
+  margin-top: 0;
+}
+
+.diag-detail {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #f0b4b4;
+  word-break: break-word;
+}
+
+.diag-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  font-size: 11px;
+}
+
+.diag-list dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.diag-list dd {
+  margin: 0;
+  color: var(--text);
+  word-break: break-all;
+}
+
+#error-hint {
+  margin: 12px 0 0;
+  line-height: 1.5;
+}

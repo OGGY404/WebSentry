@@ -28,10 +28,23 @@
       <!-- If the backend cannot be reached -->
       <section id="view-error" class="view hidden">
         <div class="state-icon error" aria-hidden="true">!</div>
-        <p class="center" id="error-message">WebSentry could not reach its backend.</p>
-        <p class="muted center small">
-          Start the backend, then press Try again.
-        </p>
+        <p class="center" id="error-message">WebSentry could not check this website.</p>
+
+        <div class="diagnostics">
+          <h2 class="section-title">What went wrong</h2>
+          <p class="diag-detail" id="error-detail"></p>
+
+          <dl class="diag-list">
+            <dt>Backend address</dt>
+            <dd id="diag-backend">unknown</dd>
+            <dt>Website</dt>
+            <dd id="diag-url">unknown</dd>
+            <dt>Time</dt>
+            <dd id="diag-time">unknown</dd>
+          </dl>
+        </div>
+
+        <p class="muted small" id="error-hint"></p>
         <button class="button" id="retry-button" type="button">Try again</button>
       </section>
 

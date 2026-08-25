@@ -116,6 +116,7 @@
       <button data-url="http://www.dubbeldwars.com">no HTTPS</button>
       <button data-url="http://paypal-secure-verify-account.tk/login.php">fake PayPal</button>
       <button data-view="history">History</button>
+      <button data-view="breakit">simulate backend down</button>
     </div>
 
     <div id="status">Loading...</div>
@@ -127,7 +128,7 @@
       // run on a normal web page. Only the calls the popup actually makes are
       // provided here.
       // ---------------------------------------------------------------------
-      const BACKEND = "http://127.0.0.1:8080";
+      let BACKEND = "http://127.0.0.1:8080";
 
       const fakeStorage = {
         history: [
@@ -191,9 +192,15 @@
               } catch (error) {
                 return {
                   status: "error",
-                  message: "WebSentry could not reach its backend. Please check that it is running."
+                  url: currentUrl,
+                  message:
+                    `Could not reach the backend at ${BACKEND}. Check that it is running. ` +
+                    `(${error.message})`
                 };
               }
+            }
+            if (message.type === "GET_DIAGNOSTICS") {
+              return { backendUrl: BACKEND, lastProblem: null };
             }
             return { ok: true };
           }
@@ -247,6 +254,11 @@
           if (button.dataset.url) {
             currentUrl = button.dataset.url;
             await mountPopup();
+          } else if (button.dataset.view === "breakit") {
+            // Point at a port with nothing on it, to see the failure report.
+            BACKEND = "http://127.0.0.1:9";
+            await mountPopup();
+            BACKEND = "http://127.0.0.1:8080";
           } else {
             // Switch the mounted popup to its history tab.
             const tab = document.querySelector('.tab[data-view="history"]');

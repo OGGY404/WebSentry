@@ -254,7 +254,7 @@ async function loadCurrentTab() {
 
 function handleResult(result) {
   if (!result) {
-    showError("WebSentry did not get an answer. Please try again.");
+    showError("The background worker did not answer. It may have been restarted.");
     return;
   }
   if (result.status === "ok") {
@@ -267,12 +267,45 @@ function handleResult(result) {
     setTimeout(loadCurrentTab, 900);
     return;
   }
-  showError(result.message);
+  showError(result.message, result.url);
 }
 
-function showError(message) {
+/** Picks a short piece of advice from what actually failed. */
+function hintFor(detail) {
+  const text = (detail || "").toLowerCase();
+  if (text.includes("could not reach")) {
+    return "The backend is probably not running. Start it, then press Try again.";
+  }
+  if (text.includes("500") || text.includes("503")) {
+    return "The backend is running but something inside it failed. Look at the backend terminal.";
+  }
+  if (text.includes("401") || text.includes("403")) {
+    return "The backend refused the request. Check the settings in the .env file.";
+  }
+  if (text.includes("risk score") || text.includes("not a scan result")) {
+    return "The backend answered, but not with a scan result. Check that it is the WebSentry backend.";
+  }
+  return "Press Try again. If it keeps failing, open the service worker console on chrome://extensions.";
+}
+
+async function showError(detail, url) {
   document.getElementById("error-message").textContent =
-    message || "WebSentry could not reach its backend.";
+    "WebSentry could not check this website.";
+  document.getElementById("error-detail").textContent =
+    detail || "No reason was recorded.";
+  document.getElementById("error-hint").textContent = hintFor(detail);
+  document.getElementById("diag-url").textContent = url || (currentTab && currentTab.url) || "unknown";
+  document.getElementById("diag-time").textContent = new Date().toLocaleTimeString();
+
+  // Ask the worker which address it is actually using.
+  try {
+    const info = await chrome.runtime.sendMessage({ type: "GET_DIAGNOSTICS" });
+    document.getElementById("diag-backend").textContent =
+      (info && info.backendUrl) || "unknown";
+  } catch (problem) {
+    document.getElementById("diag-backend").textContent = "could not ask the worker";
+  }
+
   showView("error");
 }
 

@@ -8,6 +8,22 @@ const RESULT_TTL_MS = 5 * 60 * 1000;
 /** How many past scans we keep on the computer. */
 const HISTORY_LIMIT = 50;
 
+/** Every message starts the same way, so it is easy to find in the console. */
+function log(...parts) {
+  console.log("[WebSentry]", ...parts);
+}
+
+function logProblem(...parts) {
+  console.error("[WebSentry]", ...parts);
+}
+
+/** Keeps the last problem so the popup can show what actually went wrong. */
+async function rememberProblem(detail) {
+  await chrome.storage.local.set({
+    lastProblem: { detail, at: new Date().toISOString() }
+  });
+}
+
 const BAND_COLOURS = {
   LOW: "#22c55e",
   MEDIUM: "#f59e0b",
@@ -115,54 +131,95 @@ function isScannable(url) {
 
 /** force is true when the user pressed Check again, so the saved answer is ignored. */
 async function scanUrl(tabId, url, force = false) {
-  const settings = await getSettings();
-  if (!settings.enabled) {
-    await setBadge(tabId, "off");
-    return;
-  }
-
-  // Reuse a recent answer for the same address instead of asking again.
-  const existing = await readTabResult(tabId);
-  if (
-    !force &&
-    existing &&
-    existing.status === "ok" &&
-    existing.record.url === url &&
-    Date.now() - existing.scannedAt < RESULT_TTL_MS
-  ) {
-    await setBadge(tabId, "ok", existing.record);
-    return;
-  }
-
-  await saveTabResult(tabId, { status: "scanning", url, scannedAt: Date.now() });
-  await setBadge(tabId, "scanning");
+  let backendUrl = DEFAULT_BACKEND;
 
   try {
-    const response = await fetch(`${settings.backendUrl}/api/v1/scan`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, clientId: settings.clientId })
-    });
+    const settings = await getSettings();
+    backendUrl = settings.backendUrl;
 
-    if (!response.ok) {
-      throw new Error(`The backend answered with status ${response.status}`);
+    if (!settings.enabled) {
+      await setBadge(tabId, "off");
+      return;
     }
 
-    const record = await response.json();
+    // Reuse a recent answer for the same address instead of asking again.
+    const existing = await readTabResult(tabId);
+    if (
+      !force &&
+      existing &&
+      existing.status === "ok" &&
+      existing.record.url === url &&
+      Date.now() - existing.scannedAt < RESULT_TTL_MS
+    ) {
+      log("using the saved answer for", url);
+      await setBadge(tabId, "ok", existing.record);
+      return;
+    }
+
+    log("scanning", url, "using", backendUrl);
+    await saveTabResult(tabId, { status: "scanning", url, scannedAt: Date.now() });
+    await setBadge(tabId, "scanning");
+
+    let response;
+    try {
+      response = await fetch(`${backendUrl}/api/v1/scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, clientId: settings.clientId })
+      });
+    } catch (networkError) {
+      // The request never arrived. Almost always the backend is not running.
+      throw new Error(
+        `Could not reach the backend at ${backendUrl}. Check that it is running. ` +
+        `(${networkError.message})`
+      );
+    }
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(
+        `The backend answered ${response.status} ${response.statusText}. ` +
+        (body ? `It said: ${body.slice(0, 160)}` : "It sent no message.")
+      );
+    }
+
+    let record;
+    try {
+      record = await response.json();
+    } catch (parseError) {
+      throw new Error("The backend replied with something that was not a scan result.");
+    }
+
+    if (typeof record.riskScore !== "number") {
+      throw new Error("The scan result had no risk score in it.");
+    }
 
     await saveTabResult(tabId, { status: "ok", record, scannedAt: Date.now() });
     await setBadge(tabId, "ok", record);
     await addToHistory(record);
     await warnIfDangerous(record);
+    log("scanned", record.domain, "->", record.riskScore, record.riskBand);
+
   } catch (error) {
-    console.warn("WebSentry scan failed:", error);
-    await saveTabResult(tabId, {
-      status: "error",
-      url,
-      message: "WebSentry could not reach its backend. Please check that it is running.",
-      scannedAt: Date.now()
-    });
-    await setBadge(tabId, "error");
+    // Every failure ends here, including the ones that used to escape before
+    // the try block and leave the badge blank with nothing in the console.
+    const detail = error && error.message ? error.message : String(error);
+    logProblem("scan failed for", url, "->", detail);
+    await rememberProblem(detail);
+
+    try {
+      await saveTabResult(tabId, {
+        status: "error",
+        url,
+        message: detail,
+        backendUrl,
+        scannedAt: Date.now()
+      });
+      await setBadge(tabId, "error");
+    } catch (storageError) {
+      // If even storage is failing there is nowhere left to report to.
+      logProblem("could not record the failure:", storageError);
+    }
   }
 }
 
@@ -171,7 +228,9 @@ async function scanUrl(tabId, url, force = false) {
 // Fires when a page has finished loading in a tab.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete" && isScannable(tab.url)) {
-    scanUrl(tabId, tab.url);
+    // The catch matters. Without it a failure here disappears with no badge
+    // and no message, which looks exactly like the extension doing nothing.
+    scanUrl(tabId, tab.url).catch((error) => logProblem("tab update:", error));
   }
 });
 
@@ -180,7 +239,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
     const tab = await chrome.tabs.get(tabId);
     if (isScannable(tab.url)) {
-      scanUrl(tabId, tab.url);
+      scanUrl(tabId, tab.url).catch((error) => logProblem("tab switch:", error));
     } else {
       await setBadge(tabId, "off");
     }
@@ -203,9 +262,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "RESCAN") {
-    scanUrl(message.tabId, message.url, message.force === true).then(() => {
-      readTabResult(message.tabId).then(sendResponse);
-    });
+    scanUrl(message.tabId, message.url, message.force === true)
+      .catch((error) => logProblem("rescan:", error))
+      .then(() => readTabResult(message.tabId))
+      .then(sendResponse)
+      // The popup waits for this reply, so it must always be sent.
+      .catch(() => sendResponse({ status: "error", message: "The scan could not be started." }));
+    return true;
+  }
+
+  if (message.type === "GET_DIAGNOSTICS") {
+    getSettings()
+      .then(async (settings) => {
+        const stored = await chrome.storage.local.get("lastProblem");
+        sendResponse({ backendUrl: settings.backendUrl, lastProblem: stored.lastProblem || null });
+      })
+      .catch(() => sendResponse({ backendUrl: DEFAULT_BACKEND, lastProblem: null }));
     return true;
   }
 
@@ -221,3 +293,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return false;
 });
+
+log("service worker started. Backend expected at", DEFAULT_BACKEND);
