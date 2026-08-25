@@ -54,6 +54,16 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Runs a real MongoDB during the tests only, so the database code can
+		     be proved to work without installing MongoDB on this machine. It is
+		     not part of the running application. -->
+		<dependency>
+			<groupId>de.flapdoodle.embed</groupId>
+			<artifactId>de.flapdoodle.embed.mongo</artifactId>
+			<version>4.20.1</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
