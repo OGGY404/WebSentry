@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -16,13 +17,25 @@ public class SafeBrowsingClient {
 
     private static final Logger log = LoggerFactory.getLogger(SafeBrowsingClient.class);
 
-    private static final String ENDPOINT = "https://safebrowsing.googleapis.com/v4/threatMatches:find";
+    /** Google's address. Overridden in tests so the parsing can be checked offline. */
+    static final String DEFAULT_ENDPOINT =
+            "https://safebrowsing.googleapis.com/v4/threatMatches:find";
 
     private final RestClient client;
     private final WebSentryProperties properties;
 
+    private final String endpoint;
+
+    // Spring uses this one. The second constructor exists so the tests can
+    // point the client at a stand in server.
+    @Autowired
     public SafeBrowsingClient(RestClient.Builder builder, WebSentryProperties properties) {
+        this(builder, properties, properties.getSafeBrowsing().getEndpoint());
+    }
+
+    SafeBrowsingClient(RestClient.Builder builder, WebSentryProperties properties, String endpoint) {
         this.properties = properties;
+        this.endpoint = endpoint;
         this.client = builder.build();
     }
 
@@ -45,7 +58,7 @@ public class SafeBrowsingClient {
                             "threatEntries", List.of(Map.of("url", url))));
 
             Map<String, Object> response = client.post()
-                    .uri(ENDPOINT + "?key=" + properties.getSafeBrowsing().getApiKey())
+                    .uri(endpoint + "?key=" + properties.getSafeBrowsing().getApiKey())
                     .body(body)
                     .retrieve()
                     .body(Map.class);

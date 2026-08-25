@@ -124,6 +124,15 @@ public class WebSentryProperties {
     public static class SafeBrowsing {
         private String apiKey = "";
         private int timeoutMs = 2000;
+        private String endpoint = "https://safebrowsing.googleapis.com/v4/threatMatches:find";
+
+        public String getEndpoint() {
+            return endpoint;
+        }
+
+        public void setEndpoint(String endpoint) {
+            this.endpoint = endpoint;
+        }
 
         public boolean isEnabled() {
             return apiKey != null && !apiKey.isBlank();
