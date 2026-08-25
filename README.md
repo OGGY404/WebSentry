@@ -17,6 +17,7 @@ sits behind a `RiskScorer` interface so Version A remains a config change.
 | Backend (Java, Spring Boot 3.5) | Working. Rule engine, scoring, explanations, storage, admin API. |
 | Extension (Manifest V3) | Working. Popup, badge, history, page checks. |
 | Dashboard (React, Vite) | Working. Statistics, scans, flagged sites, model metrics. |
+| Database (MongoDB Atlas) | Connected. Scan records persist across restarts. |
 
 See `docs/RUNNING.md` for how to start everything, including how to load the extension in Chrome.
 
@@ -122,11 +123,16 @@ websentry/
 
 ## Testing
 
-19 backend tests, all passing (`cd backend && mvnw test`):
+45 backend tests, all passing (`cd backend && mvnw test`):
 
 - `RuleEngineTest` — 12 tests covering HTTPS, IP hosts, brand impersonation, abused endings,
   punycode, the `@` trick, and that skipping live checks never falsely fails a certificate.
-- `ClaudeExplainerTest` — 6 tests that the explanation never contradicts its own score.
+- `MongoScanStoreTest` — 9 tests run against a real MongoDB started for the tests, including
+  the flagged counter upsert and that nested check results survive a round trip.
+- `SafeBrowsingClientTest` — 8 tests against a stand-in server, covering all four ways the
+  lookup can fail without breaking a scan.
+- `DotenvEnvironmentPostProcessorTest` — 8 tests that a blank value cannot hide a real setting.
+- `ClaudeExplainerTest` — 7 tests that the explanation never contradicts its own score.
 - `BackendApplicationTests` — the application context starts.
 
 ## Data sources
