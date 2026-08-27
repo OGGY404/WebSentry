@@ -17,6 +17,25 @@ function logProblem(...parts) {
   console.error("[WebSentry]", ...parts);
 }
 
+/** Websites the user has chosen to accept, so they are not warned again. */
+async function trustedSites() {
+  const stored = await chrome.storage.local.get("trustedSites");
+  return stored.trustedSites || [];
+}
+
+async function isTrusted(domain) {
+  return (await trustedSites()).includes(domain);
+}
+
+async function trustSite(domain) {
+  const list = await trustedSites();
+  if (domain && !list.includes(domain)) {
+    list.push(domain);
+    await chrome.storage.local.set({ trustedSites: list });
+    log("added to trusted sites:", domain);
+  }
+}
+
 /** Keeps the last problem so the popup can show what actually went wrong. */
 async function rememberProblem(detail) {
   await chrome.storage.local.set({
@@ -104,9 +123,28 @@ async function setBadge(tabId, state, record) {
 
 // --------------------------------------------------------------------------- Warning for.
 
-async function warnIfDangerous(record) {
+async function warnIfDangerous(record, tabId) {
   if (record.riskBand !== "HIGH") {
     return;
+  }
+
+  // A site the user has already chosen to accept is not warned about again.
+  if (await isTrusted(record.domain)) {
+    log("skipping the warning, site is trusted:", record.domain);
+    return;
+  }
+
+  // The full page warning is the important part. A notification alone is
+  // easy to miss, and research on warnings shows an ignorable warning is
+  // usually ignored.
+  if (tabId !== undefined) {
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: "SHOW_WARNING", record });
+    } catch (error) {
+      // The content script is not present on every page, for example on a
+      // PDF or a page that failed to load. The notification below still runs.
+      log("could not show the full page warning:", error.message);
+    }
   }
   try {
     await chrome.notifications.create(`websentry-${Date.now()}`, {
@@ -197,7 +235,15 @@ async function scanUrl(tabId, url, force = false) {
     await saveTabResult(tabId, { status: "ok", record, scannedAt: Date.now() });
     await setBadge(tabId, "ok", record);
     await addToHistory(record);
-    await warnIfDangerous(record);
+
+    // The password guard in the page needs to know the verdict, whatever it is.
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: "PAGE_VERDICT", record });
+    } catch (error) {
+      // No content script on this page. Not a problem.
+    }
+
+    await warnIfDangerous(record, tabId);
     log("scanned", record.domain, "->", record.riskScore, record.riskBand);
 
   } catch (error) {
@@ -220,6 +266,32 @@ async function scanUrl(tabId, url, force = false) {
       // If even storage is failing there is nowhere left to report to.
       logProblem("could not record the failure:", storageError);
     }
+  }
+}
+
+/** Scores a single link, for the check that runs when a link is hovered. */
+async function checkLink(url) {
+  const settings = await getSettings();
+  if (!settings.enabled) {
+    return null;
+  }
+
+  try {
+    // live=false keeps this quick. A hover must not wait for a website to
+    // answer, and the address itself is what is being judged here.
+    const response = await fetch(`${settings.backendUrl}/api/v1/scan?live=false`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, clientId: settings.clientId })
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const record = await response.json();
+    return { riskBand: record.riskBand, riskScore: record.riskScore };
+  } catch (error) {
+    logProblem("link check failed:", error.message);
+    return null;
   }
 }
 
@@ -294,6 +366,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(sendResponse)
       // The popup waits for this reply, so it must always be sent.
       .catch(() => sendResponse({ status: "error", message: "The scan could not be started." }));
+    return true;
+  }
+
+  if (message.type === "CHECK_LINK") {
+    // Scores one link without saving it as a visit or touching the badge.
+    checkLink(message.url)
+      .then(sendResponse)
+      .catch(() => sendResponse(null));
+    return true;
+  }
+
+  if (message.type === "TRUST_SITE") {
+    trustSite(message.domain)
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
+  if (message.type === "GET_TRUSTED") {
+    trustedSites().then((list) => sendResponse({ sites: list })).catch(() => sendResponse({ sites: [] }));
+    return true;
+  }
+
+  if (message.type === "UNTRUST_SITE") {
+    trustedSites()
+      .then((list) => chrome.storage.local.set({
+        trustedSites: list.filter((d) => d !== message.domain)
+      }))
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
     return true;
   }
 

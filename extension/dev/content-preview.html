@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebSentry content script preview</title>
+    <style>
+      body {
+        margin: 0; padding: 30px;
+        font-family: system-ui, "Segoe UI", sans-serif;
+        background: #f4f6f9; color: #1a1d24;
+      }
+      .wrap { max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 19px; margin: 0 0 6px; }
+      .note { color: #5b6475; font-size: 13px; margin: 0 0 22px; line-height: 1.6; }
+      .panel {
+        background: #fff; border: 1px solid #dde2ea; border-radius: 10px;
+        padding: 18px 20px; margin-bottom: 16px;
+      }
+      .panel h2 { font-size: 14px; margin: 0 0 10px; }
+      button {
+        font: inherit; font-size: 13px; background: #1d4ed8; color: #fff;
+        border: 0; border-radius: 7px; padding: 9px 14px; cursor: pointer;
+        margin: 0 6px 6px 0;
+      }
+      button:hover { opacity: .9; }
+      input {
+        font: inherit; padding: 9px 11px; border: 1px solid #cbd3de;
+        border-radius: 7px; width: 260px; margin-right: 8px;
+      }
+      a { color: #1d4ed8; display: inline-block; margin: 0 14px 8px 0; }
+      code { background: #eef1f6; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>WebSentry content script preview</h1>
+      <p class="note">
+        A development page only. It loads the real content script with a small stand in for
+        the Chrome APIs, so the warning page, the password guard and the link check can be
+        seen without installing the extension.
+      </p>
+
+      <div class="panel">
+        <h2>1. The full page warning</h2>
+        <button id="warn-high">Show the warning for a dangerous site</button>
+      </div>
+
+      <div class="panel">
+        <h2>2. The password guard</h2>
+        <p class="note" style="margin-bottom:12px">
+          Set a verdict, then click into the password box.
+        </p>
+        <button id="verdict-high">Set verdict to HIGH</button>
+        <button id="verdict-low">Set verdict to LOW</button>
+        <br />
+        <input type="text" placeholder="Username" />
+        <input type="password" placeholder="Password" id="pw" />
+      </div>
+
+      <div class="panel">
+        <h2>3. Link checking</h2>
+        <p class="note" style="margin-bottom:12px">
+          Hover a link for about half a second. Same-site links are ignored on purpose.
+        </p>
+        <a href="http://paypal-secure-verify-account.tk/login.php">A dangerous looking link</a>
+        <a href="https://www.google.com">A safe link</a>
+        <a href="http://www.dubbeldwars.com">An unencrypted link</a>
+      </div>
+    </div>
+
+    <script>
+      // A stand in for the Chrome APIs the content script uses.
+      const BACKEND = "http://127.0.0.1:8080";
+      const listeners = [];
+
+      window.chrome = {
+        runtime: {
+          onMessage: { addListener: (fn) => listeners.push(fn) },
+          sendMessage: async (message) => {
+            if (message.type === "CHECK_LINK") {
+              try {
+                const r = await fetch(`${BACKEND}/api/v1/scan?live=false`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ url: message.url, clientId: "content-preview" })
+                });
+                if (!r.ok) return null;
+                const rec = await r.json();
+                return { riskBand: rec.riskBand, riskScore: rec.riskScore };
+              } catch (e) { return null; }
+            }
+            if (message.type === "TRUST_SITE") {
+              console.log("[preview] site trusted:", message.domain);
+              return { ok: true };
+            }
+            return { ok: true };
+          }
+        }
+      };
+
+      function send(message) {
+        listeners.forEach((fn) => fn(message, {}, () => {}));
+      }
+
+      const DANGEROUS = {
+        domain: "paypal-secure-verify-account.tk",
+        riskScore: 100,
+        riskBand: "HIGH",
+        recommendation: "Leave Immediately",
+        aiExplanation:
+          "This is a fake PayPal site designed to steal your information. The connection is " +
+          "not encrypted and the web address imitates a real company.",
+        checks: {
+          reasons: [
+            "The connection is not encrypted, so anything you type could be read by others.",
+            "The address ends in .tk, an ending often used for throwaway scam sites.",
+            "The address mentions paypal but the real website name is paypal-secure-verify-account.tk."
+          ]
+        }
+      };
+
+      document.getElementById("warn-high").onclick = () =>
+        send({ type: "SHOW_WARNING", record: DANGEROUS });
+      document.getElementById("verdict-high").onclick = () =>
+        send({ type: "PAGE_VERDICT", record: DANGEROUS });
+      document.getElementById("verdict-low").onclick = () =>
+        send({ type: "PAGE_VERDICT", record: { domain: "safe.example", riskBand: "LOW", riskScore: 3 } });
+    </script>
+    <script src="../content/content-script.js"></script>
+  </body>
+</html>
