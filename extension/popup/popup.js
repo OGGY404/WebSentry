@@ -220,6 +220,61 @@ async function renderHistory() {
   showView("history");
 }
 
+// Settings
+
+const DEFAULT_BACKEND = "http://127.0.0.1:8080";
+
+/** Reads the saved settings and puts them on the screen. */
+async function renderSettings() {
+  const stored = await chrome.storage.local.get(["backendUrl", "enabled", "clientId"]);
+
+  document.getElementById("setting-enabled").checked = stored.enabled !== false;
+  document.getElementById("setting-backend").value = stored.backendUrl || DEFAULT_BACKEND;
+  document.getElementById("setting-client").textContent = stored.clientId || "not made yet";
+  document.getElementById("test-result").textContent = "";
+  document.getElementById("save-result").textContent = "";
+
+  showView("settings");
+}
+
+/** Saves what the user typed. */
+async function saveSettings() {
+  const typed = document.getElementById("setting-backend").value.trim();
+  const message = document.getElementById("save-result");
+
+  if (typed && !typed.startsWith("http://") && !typed.startsWith("https://")) {
+    message.textContent = "The address must start with http:// or https://";
+    return;
+  }
+
+  await chrome.storage.local.set({
+    enabled: document.getElementById("setting-enabled").checked,
+    backendUrl: typed || DEFAULT_BACKEND
+  });
+
+  message.textContent = "Saved. The next website you visit will use these settings.";
+}
+
+/** Asks the backend whether it is there, and reports what it says. */
+async function testConnection() {
+  const address = document.getElementById("setting-backend").value.trim() || DEFAULT_BACKEND;
+  const result = document.getElementById("test-result");
+
+  result.className = "test-result";
+  result.textContent = "Checking...";
+
+  const answer = await chrome.runtime.sendMessage({ type: "TEST_CONNECTION", backendUrl: address });
+
+  if (answer && answer.ok) {
+    result.className = "test-result good";
+    result.textContent =
+      `Connected. Storage: ${answer.storage}. Explanations: ${answer.explanations}.`;
+  } else {
+    result.className = "test-result bad";
+    result.textContent = (answer && answer.message) || "Could not reach that address.";
+  }
+}
+
 // Loading the result for the tab that is open
 
 function isScannable(url) {
@@ -319,6 +374,8 @@ document.addEventListener("DOMContentLoaded", () => {
       setActiveTab(tab.dataset.view);
       if (tab.dataset.view === "history") {
         renderHistory();
+      } else if (tab.dataset.view === "settings") {
+        renderSettings();
       } else {
         loadCurrentTab();
       }
@@ -342,6 +399,9 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(handleResult);
     }
   });
+
+  document.getElementById("save-button").addEventListener("click", saveSettings);
+  document.getElementById("test-button").addEventListener("click", testConnection);
 
   document.getElementById("clear-history-button").addEventListener("click", async () => {
     await chrome.storage.local.set({ history: [] });

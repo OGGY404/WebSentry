@@ -223,6 +223,32 @@ async function scanUrl(tabId, url, force = false) {
   }
 }
 
+/** Checks one backend address and reports what it answered. */
+async function testConnection(backendUrl) {
+  const address = (backendUrl || DEFAULT_BACKEND).replace(/\/+$/, "");
+
+  try {
+    const response = await fetch(`${address}/api/v1/health`);
+    if (!response.ok) {
+      return { ok: false, message: `That address answered ${response.status}.` };
+    }
+
+    const health = await response.json();
+    if (health.status !== "ok") {
+      return { ok: false, message: "That address answered, but not as a healthy backend." };
+    }
+
+    return {
+      ok: true,
+      storage: health.storage || "unknown",
+      explanations: health.claudeExplanations || "unknown",
+      scorer: health.scorer || "unknown"
+    };
+  } catch (error) {
+    return { ok: false, message: `Could not reach ${address}. Check the backend is running.` };
+  }
+}
+
 // Browser events
 
 // Fires when a page has finished loading in a tab.
@@ -268,6 +294,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(sendResponse)
       // The popup waits for this reply, so it must always be sent.
       .catch(() => sendResponse({ status: "error", message: "The scan could not be started." }));
+    return true;
+  }
+
+  if (message.type === "TEST_CONNECTION") {
+    // Asks the backend health endpoint whether it is there, so the user can
+    // check an address before saving it.
+    testConnection(message.backendUrl)
+      .then(sendResponse)
+      .catch((error) => sendResponse({ ok: false, message: String(error) }));
     return true;
   }
 

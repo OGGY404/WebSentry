@@ -116,6 +116,7 @@
       <button data-url="http://www.dubbeldwars.com">no HTTPS</button>
       <button data-url="http://paypal-secure-verify-account.tk/login.php">fake PayPal</button>
       <button data-view="history">History</button>
+      <button data-view="settings">Settings</button>
       <button data-view="breakit">simulate backend down</button>
     </div>
 
@@ -131,6 +132,9 @@
       let BACKEND = "http://127.0.0.1:8080";
 
       const fakeStorage = {
+        enabled: true,
+        backendUrl: "http://127.0.0.1:8080",
+        clientId: "3f9a2c71-preview-only",
         history: [
           {
             domain: "paypal-secure-verify-account.tk",
@@ -168,7 +172,14 @@
         },
         storage: {
           local: {
-            get: async (key) => (key === "history" ? { history: fakeStorage.history } : {}),
+            get: async (key) => {
+              const keys = Array.isArray(key) ? key : [key];
+              const out = {};
+              for (const k of keys) {
+                if (k in fakeStorage) out[k] = fakeStorage[k];
+              }
+              return out;
+            },
             set: async (value) => Object.assign(fakeStorage, value)
           }
         },
@@ -197,6 +208,22 @@
                     `Could not reach the backend at ${BACKEND}. Check that it is running. ` +
                     `(${error.message})`
                 };
+              }
+            }
+            if (message.type === "TEST_CONNECTION") {
+              const address = (message.backendUrl || BACKEND).replace(/\/+$/, "");
+              try {
+                const r = await fetch(`${address}/api/v1/health`);
+                if (!r.ok) return { ok: false, message: `That address answered ${r.status}.` };
+                const h = await r.json();
+                return {
+                  ok: true,
+                  storage: h.storage,
+                  explanations: h.claudeExplanations,
+                  scorer: h.scorer
+                };
+              } catch (e) {
+                return { ok: false, message: `Could not reach ${address}. Check the backend is running.` };
               }
             }
             if (message.type === "GET_DIAGNOSTICS") {
@@ -254,6 +281,9 @@
           if (button.dataset.url) {
             currentUrl = button.dataset.url;
             await mountPopup();
+          } else if (button.dataset.view === "settings") {
+            const tab = document.querySelector('.tab[data-view="settings"]');
+            if (tab) tab.click();
           } else if (button.dataset.view === "breakit") {
             // Point at a port with nothing on it, to see the failure report.
             BACKEND = "http://127.0.0.1:9";

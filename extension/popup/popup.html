@@ -16,6 +16,7 @@
         <nav class="tabs">
           <button class="tab is-active" data-view="report" type="button">Report</button>
           <button class="tab" data-view="history" type="button">History</button>
+          <button class="tab" data-view="settings" type="button">Settings</button>
         </nav>
       </header>
 
@@ -97,6 +98,48 @@
         <footer class="footer">
           <button class="button" id="rescan-button" type="button">Check again</button>
           <p class="timing muted small" id="timing-text"></p>
+        </footer>
+      </section>
+
+      <!-- Settings -->
+      <section id="view-settings" class="view hidden">
+        <h2 class="section-title">Protection</h2>
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">Check websites automatically</div>
+            <div class="setting-note">Turn off to stop WebSentry checking pages.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-enabled" checked />
+            <span class="switch-track" aria-hidden="true"></span>
+          </label>
+        </div>
+
+        <h2 class="section-title">Backend</h2>
+        <div class="field">
+          <label class="setting-name" for="setting-backend">Address</label>
+          <input type="text" id="setting-backend" spellcheck="false"
+                 placeholder="http://127.0.0.1:8080" />
+          <div class="setting-note">Where the security checks are done.</div>
+        </div>
+
+        <button class="button ghost" id="test-button" type="button">Test connection</button>
+        <p class="test-result" id="test-result"></p>
+
+        <div class="divider"></div>
+
+        <h2 class="section-title">This computer</h2>
+        <dl class="diag-list">
+          <dt>Anonymous ID</dt>
+          <dd id="setting-client">unknown</dd>
+        </dl>
+        <p class="setting-note">
+          A random identifier made on this computer. No name or email is ever sent.
+        </p>
+
+        <footer class="footer">
+          <button class="button" id="save-button" type="button">Save</button>
+          <p class="timing muted small" id="save-result"></p>
         </footer>
       </section>
 
