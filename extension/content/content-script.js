@@ -9,7 +9,12 @@
   const LOCAL_HOSTS =
     /^(localhost|\[::1\])$|^0\.0\.0\.0$|^127(\.\d{1,3}){3}$|^10(\.\d{1,3}){3}$|^192\.168(\.\d{1,3}){2}$|^172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}$/i;
 
-  if (LOCAL_HOSTS.test(location.hostname)) {
+  // The development preview page is served from this computer too, so it
+  // sets this flag to ask for the checks to run anyway. A real website never
+  // sets it, so the rule above still protects every ordinary local page.
+  const isPreviewPage = window.__websentryPreview === true;
+
+  if (LOCAL_HOSTS.test(location.hostname) && !isPreviewPage) {
     return;
   }
 

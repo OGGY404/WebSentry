@@ -69,6 +69,10 @@
     </div>
 
     <script>
+      // This page is served from this computer, and the content script skips
+      // local pages. This flag asks it to run here anyway.
+      window.__websentryPreview = true;
+
       // A stand in for the Chrome APIs the content script uses.
       const BACKEND = "http://127.0.0.1:8080";
       const listeners = [];
