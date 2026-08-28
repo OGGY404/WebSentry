@@ -17,6 +17,25 @@ function logProblem(...parts) {
   console.error("[WebSentry]", ...parts);
 }
 
+/**
+ * True when the only thing that went wrong is that the tab has gone.
+ *
+ * A user can close a tab, or move to another page, while its scan is still
+ * running. Chrome then refuses to colour the badge for that tab. That is
+ * ordinary behaviour rather than a fault, so it is not reported as one.
+ */
+function isTabGone(error) {
+  const text = error && error.message ? error.message : String(error);
+  return (
+    text.includes("No tab with id") ||
+    text.includes("No tab with given id") ||
+    text.includes("Invalid tab ID") ||
+    text.includes("tab was closed") ||
+    text.includes("Frame with ID") ||
+    text.includes("No frame with id")
+  );
+}
+
 /** Websites the user has chosen to accept, so they are not warned again. */
 async function trustedSites() {
   const stored = await chrome.storage.local.get("trustedSites");
@@ -96,9 +115,20 @@ async function addToHistory(record) {
   await chrome.storage.local.set({ history: history.slice(0, HISTORY_LIMIT) });
 }
 
-// --------------------------------------------------------------------------- Badge.
+// The toolbar badge
 
 async function setBadge(tabId, state, record) {
+  try {
+    await applyBadge(tabId, state, record);
+  } catch (error) {
+    if (!isTabGone(error)) {
+      throw error;
+    }
+    // The tab closed while the scan was running. Nothing to colour.
+  }
+}
+
+async function applyBadge(tabId, state, record) {
   if (state === "scanning") {
     await chrome.action.setBadgeText({ tabId, text: "..." });
     await chrome.action.setBadgeBackgroundColor({ tabId, color: "#6b7280" });
@@ -121,7 +151,7 @@ async function setBadge(tabId, state, record) {
   });
 }
 
-// --------------------------------------------------------------------------- Warning for.
+// Warning the user about a dangerous website
 
 async function warnIfDangerous(record, tabId) {
   if (record.riskBand !== "HIGH") {
@@ -160,7 +190,7 @@ async function warnIfDangerous(record, tabId) {
   }
 }
 
-// --------------------------------------------------------------------------- Scanning.
+// Scanning
 
 /**
  * Addresses on this computer or on a private network. These are skipped.
@@ -272,6 +302,12 @@ async function scanUrl(tabId, url, force = false) {
   } catch (error) {
     // Every failure ends here, including the ones that used to escape before
     // the try block and leave the badge blank with nothing in the console.
+    if (isTabGone(error)) {
+      // The user closed the tab or moved on before the answer arrived.
+      log("tab closed before the scan finished, nothing to show for", url);
+      return;
+    }
+
     const detail = error && error.message ? error.message : String(error);
     logProblem("scan failed for", url, "->", detail);
     await rememberProblem(detail);
@@ -286,8 +322,10 @@ async function scanUrl(tabId, url, force = false) {
       });
       await setBadge(tabId, "error");
     } catch (storageError) {
-      // If even storage is failing there is nowhere left to report to.
-      logProblem("could not record the failure:", storageError);
+      if (!isTabGone(storageError)) {
+        // If even storage is failing there is nowhere left to report to.
+        logProblem("could not record the failure:", storageError);
+      }
     }
   }
 }
@@ -351,7 +389,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete" && isScannable(tab.url)) {
     // The catch matters. Without it a failure here disappears with no badge
     // and no message, which looks exactly like the extension doing nothing.
-    scanUrl(tabId, tab.url).catch((error) => logProblem("tab update:", error));
+    scanUrl(tabId, tab.url).catch((error) => {
+      if (!isTabGone(error)) {
+        logProblem("tab update:", error);
+      }
+    });
   }
 });
 
@@ -360,7 +402,11 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
     const tab = await chrome.tabs.get(tabId);
     if (isScannable(tab.url)) {
-      scanUrl(tabId, tab.url).catch((error) => logProblem("tab switch:", error));
+      scanUrl(tabId, tab.url).catch((error) => {
+        if (!isTabGone(error)) {
+          logProblem("tab switch:", error);
+        }
+      });
     } else {
       await setBadge(tabId, "off");
     }
