@@ -2,17 +2,40 @@ import { useEffect, useState } from "react";
 
 import { getScans } from "../api.js";
 import { bandClass, formatWhen, shorten } from "../format.js";
+import { downloadCsv } from "../csv.js";
 
 /** Every scan in the system, newest first, one page at a time. */
 export default function ScansTable() {
   const [page, setPage] = useState(0);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState("");
 
   useEffect(() => {
     setError("");
     getScans(page, 25).then(setData).catch((problem) => setError(problem.message));
   }, [page]);
+
+  async function saveEverything() {
+    setSaving("Collecting every scan...");
+    try {
+      // The table shows one page at a time, but a saved file is only useful if
+      // it holds everything, so the pages are fetched and joined here.
+      const collected = [];
+      let next = 0;
+      let total = 1;
+      while (next < total) {
+        const chunk = await getScans(next, 200);
+        collected.push(...chunk.items);
+        total = chunk.totalPages;
+        next += 1;
+      }
+      const saved = downloadCsv(collected, "websentry-all-scans");
+      setSaving(`Saved ${saved.rows} scans as ${saved.name}`);
+    } catch (problem) {
+      setSaving(`Could not save the file: ${problem.message}`);
+    }
+  }
 
   if (error) {
     return <div className="message error">Could not load scans: {error}</div>;
@@ -32,7 +55,13 @@ export default function ScansTable() {
 
   return (
     <div className="card">
-      <h2 className="card-title">All scans ({data.totalItems})</h2>
+      <div className="card-head">
+        <h2 className="card-title">All scans ({data.totalItems})</h2>
+        <button className="button ghost small-button" onClick={saveEverything}>
+          Download CSV
+        </button>
+      </div>
+      {saving && <p className="save-note">{saving}</p>}
 
       <div className="table-wrap">
         <table>

@@ -428,3 +428,29 @@ tr:hover td {
 .small {
   font-size: 12px;
 }
+
+/* --- Card heading with a button on the right ----------------------------- */
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.card-head .card-title {
+  margin-bottom: 0;
+}
+
+.small-button {
+  padding: 6px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.save-note {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--muted);
+}

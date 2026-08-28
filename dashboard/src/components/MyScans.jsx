@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { getMyScans } from "../api.js";
 import { bandClass, formatWhen, shorten } from "../format.js";
+import { downloadCsv } from "../csv.js";
 
 /**
  * The scans belonging to one browser, opened from the extension.
@@ -69,7 +70,17 @@ export default function MyScans({ clientId }) {
       </div>
 
       <div className="card">
-        <h2 className="card-title">Your websites</h2>
+        <div className="card-head">
+          <h2 className="card-title">Your websites</h2>
+          {scans.length > 0 && (
+            <button
+              className="button ghost small-button"
+              onClick={() => downloadCsv(scans, "websentry-my-websites")}
+            >
+              Download CSV
+            </button>
+          )}
+        </div>
 
         {scans.length === 0 ? (
           <div className="empty">
