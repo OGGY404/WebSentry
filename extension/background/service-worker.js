@@ -162,9 +162,32 @@ async function warnIfDangerous(record, tabId) {
 
 // --------------------------------------------------------------------------- Scanning.
 
+/**
+ * Addresses on this computer or on a private network. These are skipped.
+ *
+ * A page served from the user's own machine is not a phishing risk, and plain
+ * http is normal there. Without this the extension warns about its own
+ * dashboard, which is both wrong and alarming.
+ */
+const LOCAL_HOSTS = /^(localhost|\[::1\])$|^0\.0\.0\.0$|^127(\.\d{1,3}){3}$|^10(\.\d{1,3}){3}$|^192\.168(\.\d{1,3}){2}$|^172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}$/i;
+
+function isLocalAddress(url) {
+  try {
+    return LOCAL_HOSTS.test(new URL(url).hostname);
+  } catch (error) {
+    return false;
+  }
+}
+
 /** True for addresses we can actually check. */
 function isScannable(url) {
-  return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"));
+  if (typeof url !== "string") {
+    return false;
+  }
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return false;
+  }
+  return !isLocalAddress(url);
 }
 
 /** force is true when the user pressed Check again, so the saved answer is ignored. */

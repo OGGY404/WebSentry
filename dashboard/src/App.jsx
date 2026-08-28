@@ -4,19 +4,32 @@ import { getHealth } from "./api.js";
 import FlaggedTable from "./components/FlaggedTable.jsx";
 import Login from "./components/Login.jsx";
 import ModelPanel from "./components/ModelPanel.jsx";
+import MyScans from "./components/MyScans.jsx";
 import ScansTable from "./components/ScansTable.jsx";
 import StatsPanel from "./components/StatsPanel.jsx";
 
 const TABS = [
+  { key: "mine", label: "My websites" },
   { key: "stats", label: "Statistics" },
   { key: "scans", label: "All scans" },
   { key: "flagged", label: "Flagged websites" },
   { key: "model", label: "Model" }
 ];
 
+/**
+ * The extension opens this page with its own identifier in the address, so a
+ * person can see the websites checked on their computer. It is a random value
+ * made on their machine, not an account.
+ */
+function clientIdFromAddress() {
+  return new URLSearchParams(window.location.search).get("client") || "";
+}
+
 export default function App() {
   const [username, setUsername] = useState(null);
-  const [tab, setTab] = useState("stats");
+  const clientId = clientIdFromAddress();
+  // Arriving from the extension opens your own websites first.
+  const [tab, setTab] = useState(clientId ? "mine" : "stats");
   const [health, setHealth] = useState(null);
 
   // Shows which parts are switched on, so a demo never starts with a surprise.
@@ -63,6 +76,7 @@ export default function App() {
       </nav>
 
       <main className="content">
+        {tab === "mine" && <MyScans clientId={clientId} />}
         {tab === "stats" && <StatsPanel />}
         {tab === "scans" && <ScansTable />}
         {tab === "flagged" && <FlaggedTable />}

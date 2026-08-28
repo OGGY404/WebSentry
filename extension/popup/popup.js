@@ -403,6 +403,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("save-button").addEventListener("click", saveSettings);
   document.getElementById("test-button").addEventListener("click", testConnection);
 
+  document.getElementById("dashboard-button").addEventListener("click", async () => {
+    // The identifier is passed so the dashboard can open on this computer's
+    // own websites. It is a random value made here, not an account.
+    const stored = await chrome.storage.local.get(["clientId", "dashboardUrl"]);
+    const dashboard = stored.dashboardUrl || "http://localhost:5173";
+    const address = stored.clientId
+      ? `${dashboard}/?client=${encodeURIComponent(stored.clientId)}`
+      : dashboard;
+    chrome.tabs.create({ url: address });
+  });
+
   document.getElementById("clear-history-button").addEventListener("click", async () => {
     await chrome.storage.local.set({ history: [] });
     renderHistory();

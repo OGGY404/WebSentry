@@ -3,6 +3,16 @@
 (function () {
   "use strict";
 
+  // Pages served from this computer or a private network are left alone.
+  // Plain http is normal there, so warning about it is wrong, and it would
+  // mean the extension warns about its own dashboard.
+  const LOCAL_HOSTS =
+    /^(localhost|\[::1\])$|^0\.0\.0\.0$|^127(\.\d{1,3}){3}$|^10(\.\d{1,3}){3}$|^192\.168(\.\d{1,3}){2}$|^172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}$/i;
+
+  if (LOCAL_HOSTS.test(location.hostname)) {
+    return;
+  }
+
   /** Tags that load a file into the page. */
   const RESOURCE_TAGS = ["img", "script", "iframe", "link", "audio", "video", "source", "embed", "object"];
 
@@ -429,7 +439,13 @@
       return false;
     }
     try {
-      return new URL(anchor.href).hostname !== location.hostname;
+      const host = new URL(anchor.href).hostname;
+      // A link to this computer or a private network is not checked, for the
+      // same reason the page itself is not.
+      if (/^(localhost|\[::1\])$|^0\.0\.0\.0$|^127(\.\d{1,3}){3}$|^10(\.\d{1,3}){3}$|^192\.168(\.\d{1,3}){2}$|^172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}$/i.test(host)) {
+        return false;
+      }
+      return host !== location.hostname;
     } catch (error) {
       return false;
     }

@@ -28,3 +28,5 @@ export const getStats = (days = 7) => get(`/admin/stats?days=${days}`);
 export const getScans = (page = 0, size = 25) => get(`/admin/scans?page=${page}&size=${size}`);
 export const getFlagged = (limit = 20) => get(`/admin/flagged?limit=${limit}`);
 export const getModel = () => get("/admin/model");
+export const getMyScans = (clientId, limit = 50) =>
+  get(`/history?clientId=${encodeURIComponent(clientId)}&limit=${limit}`);
